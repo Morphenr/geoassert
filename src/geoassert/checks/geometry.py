@@ -54,12 +54,10 @@ class GeometryTypeCheck(BaseCheck):
         table = read_table(info.path, columns=[col])
         geoms = wkb_column_to_geometries(table.column(col))
 
-        import shapely
-
         observed_types: set[str] = set()
         for g in geoms:
             if g is not None:
-                observed_types.add(shapely.get_type_id(g).__class__.__name__)
+                observed_types.add(g.geom_type)
 
         allowed = set(contract.geometry.type)
         disallowed = observed_types - allowed

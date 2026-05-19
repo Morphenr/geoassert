@@ -4,6 +4,8 @@ Data contracts for geospatial pipelines.
 
 `geoassert` validates GeoParquet and other geospatial datasets before bad geometry, CRS mistakes, broken metadata, or spatial coverage gaps reach downstream maps, models, and analytics.
 
+![geoassert demo](demo/demo.gif)
+
 ---
 
 ## Install

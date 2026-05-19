@@ -1,0 +1,23 @@
+geoassert_version: "0.1"
+
+dataset: buildings
+
+geometry:
+  column: geometry
+  type:
+    - Polygon
+  crs: EPSG:4326
+  allow_empty: false
+
+bounds:
+  within:
+    bbox: [-1.0, 51.0, 1.0, 52.0]
+
+attributes:
+  building_id:
+    nullable: false
+    unique: true
+  height_m:
+    nullable: true
+    min: 0
+    max: 400

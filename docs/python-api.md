@@ -4,6 +4,8 @@
 
 ::: geoassert.validate
 
+::: geoassert.validate_source
+
 ::: geoassert.validate_directory
 
 ::: geoassert.profile

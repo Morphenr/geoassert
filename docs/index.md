@@ -94,4 +94,8 @@ geoassert validate data/buildings.parquet --contract contracts/buildings.yml
 | **v0.2** | ✅ shipped | GitHub Actions annotations, JUnit XML, sampling, severity control |
 | **v0.3** | ✅ shipped | DuckDB backend, cloud paths, partition validation, row group checks |
 | **v0.4** | ✅ shipped | PostGIS, BigQuery GIS, Snowflake; dbt integration; `validate_source()` API |
-| **v0.5** | planned | Spatial drift checks, H3 coverage validation, HTML reports |
+| **v0.5** | planned | **Durable reports** — JSON, Markdown, HTML artefacts; shareable validation summaries; CI upload helpers |
+| **v0.6** | planned | **Trustworthy geospatial semantics** — CRS equivalence and axis-order detection, antimeridian handling, Z/M dimensions, units, precision, empty geometry policies, metadata-vs-data alignment |
+| **v0.7** | planned | **Format coverage** — GeoJSON, FlatGeobuf, Shapefile quirks, GPKG; one contract across all formats |
+| **v0.8** | planned | **Enterprise contract model** — versioning, inheritance, reusable fragments, environment overrides; built for governance and multi-team adoption |
+| **v0.9** | planned | **Extensibility** — first-class custom check API via `BaseCheck` subclassing, check discovery, plugin registry |

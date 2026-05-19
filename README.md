@@ -273,7 +273,11 @@ Every failed check explains what failed, what was expected, what was observed, a
 | **v0.2** | ✅ shipped | GitHub Actions annotations, JUnit XML, sampling, configurable severity |
 | **v0.3** | ✅ shipped | DuckDB backend, cloud paths (S3/GCS/Azure), partition validation, row group checks |
 | **v0.4** | ✅ shipped | PostGIS, BigQuery GIS, Snowflake engines; dbt integration; `validate_source()` API |
-| **v0.5** | planned | Spatial drift checks, H3 coverage validation, HTML reports |
+| **v0.5** | planned | **Durable reports** — JSON, Markdown, HTML report artefacts; shareable validation summaries; CI artefact upload helpers |
+| **v0.6** | planned | **Trustworthy geospatial semantics** — CRS equivalence and axis-order detection, antimeridian handling, Z/M dimension checks, unit and precision validation, mixed geometry types, empty geometry policies, metadata-vs-data alignment |
+| **v0.7** | planned | **Format coverage** — GeoJSON, FlatGeobuf, Shapefile (and its quirks), GPKG; single contract works across formats |
+| **v0.8** | planned | **Enterprise contract model** — contract versioning, inheritance, reusable fragments, environment-specific overrides; designed for governance and multi-team adoption |
+| **v0.9** | planned | **Extensibility** — first-class custom check API via `BaseCheck` subclassing, check discovery, plugin registry; write a check in five lines |
 
 ---
 

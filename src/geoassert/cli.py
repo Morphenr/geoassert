@@ -16,7 +16,12 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 geoparquet_app = typer.Typer(help="GeoParquet-specific checks.", no_args_is_help=True)
+dbt_app = typer.Typer(
+    help="dbt integration — discover and validate dbt model outputs.",
+    no_args_is_help=True,
+)
 app.add_typer(geoparquet_app, name="geoparquet")
+app.add_typer(dbt_app, name="dbt")
 
 console = Console()
 err = Console(stderr=True)
@@ -95,7 +100,10 @@ def init_contract(
 
 @app.command()
 def validate(
-    path: Path = typer.Argument(..., help="Path to the dataset or directory."),
+    path: str = typer.Argument(
+        ...,
+        help="Path/URI to dataset or directory. Supports s3://, gs://, az://, postgis://, bigquery://.",
+    ),
     contract: Path = typer.Option(..., "--contract", "-c", help="Path to the contract YAML."),
     format: str = typer.Option("text", "--format", "-f", help=_FORMAT_HELP),
     fail_on_warn: bool = typer.Option(False, "--fail-on-warn", help="Exit 1 on warnings."),
@@ -117,6 +125,22 @@ def validate(
         "--junit-out",
         help="Write JUnit XML to this file (in addition to the chosen --format output).",
     ),
+    # Warehouse connection options
+    dsn: str | None = typer.Option(None, "--dsn", help="PostgreSQL DSN for PostGIS sources."),
+    geom_col: str = typer.Option(
+        "geometry", "--geom-col", help="Geometry column name (warehouse sources)."
+    ),
+    bq_project: str | None = typer.Option(
+        None, "--bq-project", help="GCP project ID (BigQuery sources)."
+    ),
+    sf_account: str | None = typer.Option(
+        None, "--sf-account", help="Snowflake account identifier."
+    ),
+    sf_user: str | None = typer.Option(None, "--sf-user", help="Snowflake username."),
+    sf_password: str | None = typer.Option(None, "--sf-password", help="Snowflake password."),
+    sf_warehouse: str | None = typer.Option(
+        None, "--sf-warehouse", help="Snowflake virtual warehouse."
+    ),
 ) -> None:
     """Validate a dataset or directory of datasets against a contract."""
     from geoassert.contracts.loader import load_contract
@@ -127,8 +151,34 @@ def validate(
         err.print(f"[red]Contract error:[/red] {exc}")
         raise typer.Exit(2) from None
 
-    if path.is_dir():
-        _validate_directory(path, loaded, format, fail_on_warn, sample, engine, junit_out)
+    # Warehouse URI dispatch
+    if path.startswith(("postgis://", "postgresql://")):
+        _validate_postgis(path, loaded, format, fail_on_warn, sample, geom_col, junit_out)
+        return
+    if path.startswith("bigquery://"):
+        _validate_bigquery(
+            path, loaded, format, fail_on_warn, sample, geom_col, bq_project, junit_out
+        )
+        return
+    if path.startswith("snowflake://"):
+        _validate_snowflake(
+            path,
+            loaded,
+            format,
+            fail_on_warn,
+            sample,
+            geom_col,
+            sf_account,
+            sf_user,
+            sf_password,
+            sf_warehouse,
+            junit_out,
+        )
+        return
+
+    local_path = Path(path)
+    if local_path.is_dir():
+        _validate_directory(local_path, loaded, format, fail_on_warn, sample, engine, junit_out)
         return
 
     from geoassert.runner import run_validation
@@ -197,6 +247,290 @@ def _validate_directory(
     if any_failed:
         raise typer.Exit(1)
     if fail_on_warn and any_warned:
+        raise typer.Exit(1)
+
+
+def _validate_postgis(
+    uri: str,
+    loaded: object,
+    format: str,
+    fail_on_warn: bool,
+    sample: int | None,
+    geom_col: str,
+    junit_out: Path | None,
+) -> None:
+    """Validate a PostGIS table via postgis:// or postgresql:// URI."""
+    from urllib.parse import urlparse
+
+    from geoassert.engines.postgis import read_postgis_info
+    from geoassert.runner import run_validation_from_info
+
+    parsed = urlparse(uri)
+    # Rebuild DSN as postgresql://
+    dsn = uri.replace("postgis://", "postgresql://", 1)
+    # Table and schema from path: /schema/table or /table
+    path_parts = parsed.path.strip("/").split("/")
+    if len(path_parts) >= 2:
+        schema, table = path_parts[0], path_parts[1]
+    else:
+        schema, table = "public", path_parts[0]
+
+    try:
+        info = read_postgis_info(dsn, table, geom_col=geom_col, schema=schema, sample=sample)
+        result = run_validation_from_info(info, loaded)  # type: ignore[arg-type]
+    except DataReadError as exc:
+        err.print(f"[red]Data error:[/red] {exc}")
+        raise typer.Exit(3) from None
+    except GeoAssertError as exc:
+        err.print(f"[red]Error:[/red] {exc}")
+        raise typer.Exit(4) from None
+
+    _emit_result(result, format, console)
+    if junit_out is not None:
+        from geoassert.reports.junit import render_junit
+
+        junit_out.write_text(render_junit(result), encoding="utf-8")
+    if not result.passed:
+        raise typer.Exit(1)
+    if fail_on_warn and result.warnings:
+        raise typer.Exit(1)
+
+
+def _validate_bigquery(
+    uri: str,
+    loaded: object,
+    format: str,
+    fail_on_warn: bool,
+    sample: int | None,
+    geom_col: str,
+    bq_project: str | None,
+    junit_out: Path | None,
+) -> None:
+    """Validate a BigQuery table via bigquery://project/dataset/table URI."""
+    from urllib.parse import urlparse
+
+    from geoassert.engines.bigquery import read_bigquery_info
+    from geoassert.runner import run_validation_from_info
+
+    parsed = urlparse(uri)
+    project = bq_project or parsed.netloc
+    path_parts = parsed.path.strip("/").split("/")
+    if len(path_parts) < 2:
+        err.print("[red]Error:[/red] BigQuery URI must be bigquery://project/dataset/table")
+        raise typer.Exit(2)
+    dataset, table = path_parts[0], path_parts[1]
+
+    try:
+        info = read_bigquery_info(project, dataset, table, geom_col=geom_col, sample=sample)
+        result = run_validation_from_info(info, loaded)  # type: ignore[arg-type]
+    except DataReadError as exc:
+        err.print(f"[red]Data error:[/red] {exc}")
+        raise typer.Exit(3) from None
+    except GeoAssertError as exc:
+        err.print(f"[red]Error:[/red] {exc}")
+        raise typer.Exit(4) from None
+
+    _emit_result(result, format, console)
+    if junit_out is not None:
+        from geoassert.reports.junit import render_junit
+
+        junit_out.write_text(render_junit(result), encoding="utf-8")
+    if not result.passed:
+        raise typer.Exit(1)
+    if fail_on_warn and result.warnings:
+        raise typer.Exit(1)
+
+
+def _validate_snowflake(
+    uri: str,
+    loaded: object,
+    format: str,
+    fail_on_warn: bool,
+    sample: int | None,
+    geom_col: str,
+    sf_account: str | None,
+    sf_user: str | None,
+    sf_password: str | None,
+    sf_warehouse: str | None,
+    junit_out: Path | None,
+) -> None:
+    """Validate a Snowflake table via snowflake://account/database/schema/table URI."""
+    from urllib.parse import urlparse
+
+    from geoassert.engines.snowflake import read_snowflake_info
+    from geoassert.runner import run_validation_from_info
+
+    parsed = urlparse(uri)
+    account = sf_account or parsed.netloc
+    path_parts = parsed.path.strip("/").split("/")
+    if len(path_parts) < 3:
+        err.print(
+            "[red]Error:[/red] Snowflake URI must be snowflake://account/database/schema/table"
+        )
+        raise typer.Exit(2)
+    database, schema, table = path_parts[0], path_parts[1], path_parts[2]
+
+    if not sf_user or not sf_password:
+        err.print("[red]Error:[/red] --sf-user and --sf-password are required for Snowflake.")
+        raise typer.Exit(2)
+
+    try:
+        info = read_snowflake_info(
+            account,
+            sf_user,
+            sf_password,
+            database,
+            schema,
+            table,
+            geom_col=geom_col,
+            warehouse=sf_warehouse,
+            sample=sample,
+        )
+        result = run_validation_from_info(info, loaded)  # type: ignore[arg-type]
+    except DataReadError as exc:
+        err.print(f"[red]Data error:[/red] {exc}")
+        raise typer.Exit(3) from None
+    except GeoAssertError as exc:
+        err.print(f"[red]Error:[/red] {exc}")
+        raise typer.Exit(4) from None
+
+    _emit_result(result, format, console)
+    if junit_out is not None:
+        from geoassert.reports.junit import render_junit
+
+        junit_out.write_text(render_junit(result), encoding="utf-8")
+    if not result.passed:
+        raise typer.Exit(1)
+    if fail_on_warn and result.warnings:
+        raise typer.Exit(1)
+
+
+# ── dbt subcommands ────────────────────────────────────────────────────────────
+
+
+@dbt_app.command("list")
+def dbt_list(
+    project_dir: Path | None = typer.Option(
+        None, "--project-dir", "-p", help="dbt project root (default: current directory)."
+    ),
+    format: str = typer.Option("text", "--format", "-f", help="Output format: text | json"),
+) -> None:
+    """List all models found in the dbt manifest."""
+    from geoassert.integrations.dbt import find_manifest, list_models, load_manifest
+
+    try:
+        manifest_path = find_manifest(project_dir)
+        manifest = load_manifest(manifest_path)
+    except FileNotFoundError as exc:
+        err.print(f"[red]Error:[/red] {exc}")
+        raise typer.Exit(3) from None
+    except ValueError as exc:
+        err.print(f"[red]Error:[/red] {exc}")
+        raise typer.Exit(2) from None
+
+    models = list_models(manifest)
+    if not models:
+        console.print("[yellow]No models found in manifest.[/yellow]")
+        return
+
+    if format == "json":
+        import json
+
+        console.print_json(
+            json.dumps(
+                [
+                    {
+                        "name": m.name,
+                        "materialized": m.materialized,
+                        "full_name": m.full_name,
+                        "tags": m.tags,
+                    }
+                    for m in models
+                ]
+            )
+        )
+    else:
+        console.print(f"[bold]Found {len(models)} model(s) in {manifest_path}[/bold]\n")
+        for m in models:
+            console.print(f"  [cyan]{m.name}[/cyan]  [dim]{m.materialized}[/dim]  {m.full_name}")
+
+
+@dbt_app.command("validate")
+def dbt_validate(
+    model_name: str = typer.Argument(..., help="dbt model name to validate."),
+    contract: Path = typer.Option(..., "--contract", "-c", help="Path to the contract YAML."),
+    project_dir: Path | None = typer.Option(
+        None, "--project-dir", "-p", help="dbt project root (default: current directory)."
+    ),
+    format: str = typer.Option("text", "--format", "-f", help=_FORMAT_HELP),
+    fail_on_warn: bool = typer.Option(False, "--fail-on-warn", help="Exit 1 on warnings."),
+    sample: int | None = typer.Option(None, "--sample", "-n", help="Row sample limit.", min=1),
+    engine: str = typer.Option(
+        "pyarrow", "--engine", "-e", help="Compute engine: pyarrow | duckdb"
+    ),
+    dsn: str | None = typer.Option(
+        None, "--dsn", help="PostgreSQL DSN for PostGIS-materialized models."
+    ),
+    file_path: Path | None = typer.Option(
+        None, "--path", help="Direct file path override (Parquet file for this model)."
+    ),
+    junit_out: Path | None = typer.Option(
+        None, "--junit-out", help="Write JUnit XML to this file."
+    ),
+) -> None:
+    """Validate a dbt model output against a contract."""
+    from geoassert.integrations.dbt import (
+        find_manifest,
+        get_model,
+        load_manifest,
+        validate_dbt_model,
+    )
+
+    try:
+        from geoassert.contracts.loader import load_contract as _load_contract
+
+        loaded_contract = _load_contract(contract)  # noqa: F841
+    except ContractError as exc:
+        err.print(f"[red]Contract error:[/red] {exc}")
+        raise typer.Exit(2) from None
+
+    try:
+        manifest_path = find_manifest(project_dir)
+        manifest = load_manifest(manifest_path)
+        model = get_model(manifest, model_name)
+    except FileNotFoundError as exc:
+        err.print(f"[red]Error:[/red] {exc}")
+        raise typer.Exit(3) from None
+    except (KeyError, ValueError) as exc:
+        err.print(f"[red]Error:[/red] {exc}")
+        raise typer.Exit(2) from None
+
+    try:
+        result = validate_dbt_model(
+            model,
+            contract,
+            dsn=dsn,
+            file_path=file_path,
+            sample=sample,
+            engine=engine,
+        )
+    except DataReadError as exc:
+        err.print(f"[red]Data error:[/red] {exc}")
+        raise typer.Exit(3) from None
+    except (GeoAssertError, ValueError) as exc:
+        err.print(f"[red]Error:[/red] {exc}")
+        raise typer.Exit(4) from None
+
+    _emit_result(result, format, console)
+
+    if junit_out is not None:
+        from geoassert.reports.junit import render_junit
+
+        junit_out.write_text(render_junit(result), encoding="utf-8")
+
+    if not result.passed:
+        raise typer.Exit(1)
+    if fail_on_warn and result.warnings:
         raise typer.Exit(1)
 
 

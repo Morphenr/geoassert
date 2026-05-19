@@ -1,6 +1,11 @@
 # Engines
 
-`geoassert` supports two compute engines for attribute checks. The engine does not affect metadata-only checks (GeoParquet, CRS, bounds) — those always use PyArrow's metadata reader.
+`geoassert` has two kinds of engines:
+
+- **Compute engines** (`pyarrow`, `duckdb`) — control how attribute checks are executed against a dataset that has already been read.
+- **Source engines** (PostGIS, BigQuery, Snowflake) — connect to a remote database or warehouse, pull the data, and hand a `DatasetInfo` to the standard check pipeline.
+
+The compute engine does not affect metadata-only checks (GeoParquet, CRS, bounds) — those always use PyArrow's metadata reader.
 
 ---
 
@@ -119,3 +124,73 @@ The sample is drawn with `random.sample` — results are reproducible if you see
 **Checks affected by sampling:** geometry validity, geometry empty, geometry type, attribute nullable, attribute unique, attribute range.
 
 **Checks not affected:** all GeoParquet metadata checks, CRS checks, bounds checks.
+
+---
+
+## Warehouse source engines
+
+Warehouse engines connect to a remote database, read the relevant table, and produce a `DatasetInfo` that the standard check pipeline then validates. GeoParquet-specific checks are automatically skipped for warehouse sources.
+
+Install the appropriate extra:
+
+```bash
+pip install "geoassert[postgis]"    # psycopg2-binary
+pip install "geoassert[bigquery]"   # google-cloud-bigquery
+pip install "geoassert[snowflake]"  # snowflake-connector-python
+pip install "geoassert[all]"        # all of the above
+```
+
+### PostGIS
+
+```bash
+geoassert validate postgis://user:pass@host/db/public/buildings \
+  --contract contracts/buildings.yml
+```
+
+```python
+from geoassert.engines.postgis import read_postgis_info
+import geoassert as ga
+
+info = read_postgis_info("postgresql://user:pass@host/db", "buildings", schema="public")
+result = ga.validate_source(info, "contracts/buildings.yml")
+```
+
+The engine queries geometry as WKB via `ST_AsWKB()`, looks up the SRID from `geometry_columns`, and constructs a CRS entry in the GeoParquet geo metadata format so that CRS checks work normally.
+
+### BigQuery
+
+BigQuery `GEOGRAPHY` columns are always WGS 84 (EPSG:4326); the engine hard-codes this as the CRS.
+
+```bash
+geoassert validate bigquery://my-project/my_dataset/buildings \
+  --contract contracts/buildings.yml
+```
+
+```python
+from geoassert.engines.bigquery import read_bigquery_info
+import geoassert as ga
+
+info = read_bigquery_info("my-project", "my_dataset", "buildings")
+result = ga.validate_source(info, "contracts/buildings.yml")
+```
+
+### Snowflake
+
+Snowflake geometry columns are fetched as EWKB via `ST_ASEWKB()`. Column names are lowercased automatically (Snowflake returns uppercase names by default).
+
+```bash
+geoassert validate snowflake://myaccount/MY_DB/PUBLIC/BUILDINGS \
+  --contract contracts/buildings.yml \
+  --sf-user myuser --sf-password secret
+```
+
+```python
+from geoassert.engines.snowflake import read_snowflake_info
+import geoassert as ga
+
+info = read_snowflake_info(
+    "myaccount", "myuser", "secret", "MY_DB", "PUBLIC", "BUILDINGS",
+    warehouse="COMPUTE_WH",
+)
+result = ga.validate_source(info, "contracts/buildings.yml")
+```

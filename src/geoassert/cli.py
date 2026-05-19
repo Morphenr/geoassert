@@ -21,6 +21,29 @@ app.add_typer(geoparquet_app, name="geoparquet")
 console = Console()
 err = Console(stderr=True)
 
+
+def _version_callback(value: bool) -> None:
+    if value:
+        from geoassert import __version__
+
+        console.print(f"geoassert {__version__}")
+        raise typer.Exit()
+
+
+@app.callback()
+def _main(
+    version: bool = typer.Option(
+        False,
+        "--version",
+        "-V",
+        help="Show version and exit.",
+        callback=_version_callback,
+        is_eager=True,
+    ),
+) -> None:
+    pass
+
+
 _FORMAT_HELP = "Output format: text | json | markdown | github | junit"
 
 

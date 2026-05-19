@@ -13,8 +13,10 @@ import pyarrow.parquet as pq
 ROOT = Path(__file__).parent.parent
 DATA = ROOT / "data"
 CONTRACTS = ROOT / "contracts"
+EXAMPLES = ROOT / "examples"
 DATA.mkdir(exist_ok=True)
 CONTRACTS.mkdir(exist_ok=True)
+EXAMPLES.mkdir(exist_ok=True)
 
 
 def _wkb_point(x: float, y: float) -> bytes:
@@ -69,7 +71,9 @@ geo_meta = {
 }
 table = table.replace_schema_metadata({b"geo": json.dumps(geo_meta).encode()})
 pq.write_table(table, DATA / "buildings.parquet")
+pq.write_table(table, EXAMPLES / "buildings.parquet")
 print(f"Wrote {DATA / 'buildings.parquet'}  ({n} rows)")
+print(f"Wrote {EXAMPLES / 'buildings.parquet'}  ({n} rows)")
 
 # ── demo contract ─────────────────────────────────────────────────────────────
 
@@ -99,4 +103,6 @@ attributes:
     max: 400
 """
 (CONTRACTS / "buildings.yml").write_text(contract_yaml)
+(EXAMPLES / "buildings_contract.yml").write_text(contract_yaml)
 print(f"Wrote {CONTRACTS / 'buildings.yml'}")
+print(f"Wrote {EXAMPLES / 'buildings_contract.yml'}")

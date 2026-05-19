@@ -11,6 +11,49 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ---
 
+## [0.4.0] — Unreleased
+
+### Added
+
+**Warehouse engines** — validate tables stored in cloud databases, not just files
+
+- `geoassert[postgis]` — new `engines/postgis.py` with `read_postgis_info(dsn, table, ...)` → `DatasetInfo`
+  - Connects via psycopg2; reads CRS from `geometry_columns` view; fetches geometries as WKB via `ST_AsWKB()`
+  - Handles Decimal, datetime, date, bytes, and standard scalar types in `_rows_to_arrow()`
+- `geoassert[bigquery]` — new `engines/bigquery.py` with `read_bigquery_info(project, dataset, table, ...)`
+  - Uses `google-cloud-bigquery`; reads GEOGRAPHY as WKB via `ST_AsWKB()`; always EPSG:4326
+- `geoassert[snowflake]` — new `engines/snowflake.py` with `read_snowflake_info(account, user, password, database, schema, table, ...)`
+  - Uses `snowflake-connector-python`; reads GEOMETRY via `ST_ASEWKB()` using Snowflake's `EXCLUDE` syntax
+
+**dbt integration** (`integrations/dbt.py`)
+- `find_manifest(project_dir)` — locates `target/manifest.json` or `manifest.json` in project root
+- `load_manifest(path)` — parses and validates manifest JSON
+- `list_models(manifest)` → sorted `list[DbtModel]` — filters to `resource_type == "model"` nodes
+- `get_model(manifest, model_name)` → `DbtModel` — lookup by model name with helpful error on miss
+- `validate_dbt_model(model, contract_path, *, dsn, file_path, sample, engine)` → `ValidationResult`
+  - Dispatches: `file_path` → file-based validation; `dsn` → PostGIS engine + `run_validation_from_info()`
+
+**CLI additions**
+- `geoassert dbt list [--project-dir] [--format text|json]` — list all models from the dbt manifest
+- `geoassert dbt validate <model> --contract <file> [--dsn] [--path]` — validate a specific dbt model
+- `geoassert validate` now accepts warehouse URIs:
+  - `postgis://host/db/schema/table` or `postgresql://...` — routes to PostGIS engine
+  - `bigquery://project/dataset/table` — routes to BigQuery engine (`--bq-project` for project override)
+  - `snowflake://account/database/schema/table` — routes to Snowflake engine (requires `--sf-user`, `--sf-password`)
+  - Warehouse flags: `--dsn`, `--geom-col`, `--bq-project`, `--sf-account`, `--sf-user`, `--sf-password`, `--sf-warehouse`
+
+**Public API**
+- `geoassert.validate_source(source_info, contract)` — validates a pre-built `DatasetInfo` from a warehouse engine; the programmatic equivalent of passing a warehouse URI to `validate`
+
+### Changed
+- `DatasetInfo` gains `source_type: str = "file"` and `table: pa.Table | None = None` fields
+  - `source_type` is set by warehouse engines; `run_metadata_checks()` skips GeoParquet checks when it is not `"file"`
+  - `table` holds the in-memory PyArrow table fetched from a warehouse; `read_table_for_check()` uses it transparently
+- `runner.run_validation()` now delegates to new `run_validation_from_info(info, contract)` — the core pipeline is now reusable by warehouse engines
+- `run_validation_from_info()` stats block always includes `source_type`
+
+---
+
 ## [0.3.0] — Unreleased
 
 ### Added

@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 
 __all__ = [
     "validate",
+    "validate_source",
     "validate_directory",
     "profile",
     "load_contract",
@@ -21,7 +22,7 @@ __all__ = [
     "CheckResult",
 ]
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 
 def validate(
@@ -59,6 +60,39 @@ def validate(
     if not isinstance(contract, Contract):
         contract = load_contract(contract)
     return run_validation(path, contract, sample=sample, engine=engine)
+
+
+def validate_source(
+    source_info: object,
+    contract: str | Path | Contract,
+) -> ValidationResult:
+    """Validate a pre-built DatasetInfo (warehouse source) against a contract.
+
+    Use this with the warehouse engine functions to validate PostGIS, BigQuery,
+    or Snowflake tables programmatically.
+
+    Args:
+        source_info: A `DatasetInfo` returned by `read_postgis_info()`,
+            `read_bigquery_info()`, or `read_snowflake_info()`.
+        contract: Path to a contract YAML, or a loaded `Contract` object.
+
+    Returns:
+        `ValidationResult` with `.passed`, `.failures`, `.warnings`, and `.checks`.
+
+    Example:
+        ```python
+        import geoassert as ga
+        from geoassert.engines.postgis import read_postgis_info
+
+        info = read_postgis_info("postgresql://user:pass@host/db", "buildings")
+        result = ga.validate_source(info, "contracts/buildings.yml")
+        ```
+    """
+    from geoassert.runner import run_validation_from_info
+
+    if not isinstance(contract, Contract):
+        contract = load_contract(contract)
+    return run_validation_from_info(source_info, contract)  # type: ignore[arg-type]
 
 
 def validate_directory(

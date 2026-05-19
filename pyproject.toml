@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "geoassert"
-version = "0.3.0"
+version = "0.4.0"
 description = "Data contracts for geospatial pipelines"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -37,14 +37,21 @@ dependencies = [
 [project.optional-dependencies]
 shapely  = ["shapely>=2.0"]
 geopandas = ["geopandas>=0.14", "shapely>=2.0"]
-duckdb  = ["duckdb>=0.10"]
-polars  = ["polars>=0.20"]
-dbt     = []
+duckdb    = ["duckdb>=0.10"]
+polars    = ["polars>=0.20"]
+postgis   = ["psycopg2-binary>=2.9"]
+bigquery  = ["google-cloud-bigquery>=3.0", "google-cloud-bigquery-storage>=2.0", "pyarrow>=14.0"]
+snowflake = ["snowflake-connector-python>=3.0"]
+dbt       = []
 all = [
     "shapely>=2.0",
     "geopandas>=0.14",
     "duckdb>=0.10",
     "polars>=0.20",
+    "psycopg2-binary>=2.9",
+    "google-cloud-bigquery>=3.0",
+    "google-cloud-bigquery-storage>=2.0",
+    "snowflake-connector-python>=3.0",
 ]
 docs = [
     "mkdocs>=1.6",

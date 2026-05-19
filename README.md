@@ -9,7 +9,7 @@ pip install geoassert
 geoassert validate data/buildings.parquet --contract contracts/buildings.yml
 ```
 
-![geoassert demo](demo/demo.gif)
+![geoassert demo](https://raw.githubusercontent.com/Morphenr/geoassert/main/demo/demo.gif)
 
 ---
 

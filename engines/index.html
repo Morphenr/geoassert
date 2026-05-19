@@ -529,6 +529,56 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#warehouse-source-engines" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Warehouse source engines
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Warehouse source engines">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#postgis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PostGIS
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bigquery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BigQuery
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#snowflake" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Snowflake
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -661,6 +711,56 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#warehouse-source-engines" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Warehouse source engines
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Warehouse source engines">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#postgis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PostGIS
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bigquery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BigQuery
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#snowflake" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Snowflake
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -682,7 +782,12 @@
 
 
 <h1 id="engines">Engines<a class="headerlink" href="#engines" title="Permanent link">&para;</a></h1>
-<p><code>geoassert</code> supports two compute engines for attribute checks. The engine does not affect metadata-only checks (GeoParquet, CRS, bounds) — those always use PyArrow's metadata reader.</p>
+<p><code>geoassert</code> has two kinds of engines:</p>
+<ul>
+<li><strong>Compute engines</strong> (<code>pyarrow</code>, <code>duckdb</code>) — control how attribute checks are executed against a dataset that has already been read.</li>
+<li><strong>Source engines</strong> (PostGIS, BigQuery, Snowflake) — connect to a remote database or warehouse, pull the data, and hand a <code>DatasetInfo</code> to the standard check pipeline.</li>
+</ul>
+<p>The compute engine does not affect metadata-only checks (GeoParquet, CRS, bounds) — those always use PyArrow's metadata reader.</p>
 <hr />
 <h2 id="pyarrow-default">PyArrow (default)<a class="headerlink" href="#pyarrow-default" title="Permanent link">&para;</a></h2>
 <p>The default engine reads columns into memory using PyArrow and computes null counts, distinct counts, and min/max with <code>pyarrow.compute</code>.</p>
@@ -801,6 +906,52 @@
 <p>The sample is drawn with <code>random.sample</code> — results are reproducible if you seed Python's random before calling <code>validate</code>.</p>
 <p><strong>Checks affected by sampling:</strong> geometry validity, geometry empty, geometry type, attribute nullable, attribute unique, attribute range.</p>
 <p><strong>Checks not affected:</strong> all GeoParquet metadata checks, CRS checks, bounds checks.</p>
+<hr />
+<h2 id="warehouse-source-engines">Warehouse source engines<a class="headerlink" href="#warehouse-source-engines" title="Permanent link">&para;</a></h2>
+<p>Warehouse engines connect to a remote database, read the relevant table, and produce a <code>DatasetInfo</code> that the standard check pipeline then validates. GeoParquet-specific checks are automatically skipped for warehouse sources.</p>
+<p>Install the appropriate extra:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;geoassert[postgis]&quot;</span><span class="w">    </span><span class="c1"># psycopg2-binary</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;geoassert[bigquery]&quot;</span><span class="w">   </span><span class="c1"># google-cloud-bigquery</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;geoassert[snowflake]&quot;</span><span class="w">  </span><span class="c1"># snowflake-connector-python</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">&quot;geoassert[all]&quot;</span><span class="w">        </span><span class="c1"># all of the above</span>
+</code></pre></div>
+<h3 id="postgis">PostGIS<a class="headerlink" href="#postgis" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>geoassert<span class="w"> </span>validate<span class="w"> </span>postgis://user:pass@host/db/public/buildings<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span>--contract<span class="w"> </span>contracts/buildings.yml
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">geoassert.engines.postgis</span><span class="w"> </span><span class="kn">import</span> <span class="n">read_postgis_info</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">geoassert</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ga</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="n">info</span> <span class="o">=</span> <span class="n">read_postgis_info</span><span class="p">(</span><span class="s2">&quot;postgresql://user:pass@host/db&quot;</span><span class="p">,</span> <span class="s2">&quot;buildings&quot;</span><span class="p">,</span> <span class="n">schema</span><span class="o">=</span><span class="s2">&quot;public&quot;</span><span class="p">)</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="n">result</span> <span class="o">=</span> <span class="n">ga</span><span class="o">.</span><span class="n">validate_source</span><span class="p">(</span><span class="n">info</span><span class="p">,</span> <span class="s2">&quot;contracts/buildings.yml&quot;</span><span class="p">)</span>
+</code></pre></div>
+<p>The engine queries geometry as WKB via <code>ST_AsWKB()</code>, looks up the SRID from <code>geometry_columns</code>, and constructs a CRS entry in the GeoParquet geo metadata format so that CRS checks work normally.</p>
+<h3 id="bigquery">BigQuery<a class="headerlink" href="#bigquery" title="Permanent link">&para;</a></h3>
+<p>BigQuery <code>GEOGRAPHY</code> columns are always WGS 84 (EPSG:4326); the engine hard-codes this as the CRS.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>geoassert<span class="w"> </span>validate<span class="w"> </span>bigquery://my-project/my_dataset/buildings<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span>--contract<span class="w"> </span>contracts/buildings.yml
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">geoassert.engines.bigquery</span><span class="w"> </span><span class="kn">import</span> <span class="n">read_bigquery_info</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">geoassert</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ga</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="n">info</span> <span class="o">=</span> <span class="n">read_bigquery_info</span><span class="p">(</span><span class="s2">&quot;my-project&quot;</span><span class="p">,</span> <span class="s2">&quot;my_dataset&quot;</span><span class="p">,</span> <span class="s2">&quot;buildings&quot;</span><span class="p">)</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="n">result</span> <span class="o">=</span> <span class="n">ga</span><span class="o">.</span><span class="n">validate_source</span><span class="p">(</span><span class="n">info</span><span class="p">,</span> <span class="s2">&quot;contracts/buildings.yml&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="snowflake">Snowflake<a class="headerlink" href="#snowflake" title="Permanent link">&para;</a></h3>
+<p>Snowflake geometry columns are fetched as EWKB via <code>ST_ASEWKB()</code>. Column names are lowercased automatically (Snowflake returns uppercase names by default).</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>geoassert<span class="w"> </span>validate<span class="w"> </span>snowflake://myaccount/MY_DB/PUBLIC/BUILDINGS<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span>--contract<span class="w"> </span>contracts/buildings.yml<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">  </span>--sf-user<span class="w"> </span>myuser<span class="w"> </span>--sf-password<span class="w"> </span>secret
+</code></pre></div>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">geoassert.engines.snowflake</span><span class="w"> </span><span class="kn">import</span> <span class="n">read_snowflake_info</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="kn">import</span><span class="w"> </span><span class="nn">geoassert</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ga</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="n">info</span> <span class="o">=</span> <span class="n">read_snowflake_info</span><span class="p">(</span>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>    <span class="s2">&quot;myaccount&quot;</span><span class="p">,</span> <span class="s2">&quot;myuser&quot;</span><span class="p">,</span> <span class="s2">&quot;secret&quot;</span><span class="p">,</span> <span class="s2">&quot;MY_DB&quot;</span><span class="p">,</span> <span class="s2">&quot;PUBLIC&quot;</span><span class="p">,</span> <span class="s2">&quot;BUILDINGS&quot;</span><span class="p">,</span>
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>    <span class="n">warehouse</span><span class="o">=</span><span class="s2">&quot;COMPUTE_WH&quot;</span><span class="p">,</span>
+<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="p">)</span>
+<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="n">result</span> <span class="o">=</span> <span class="n">ga</span><span class="o">.</span><span class="n">validate_source</span><span class="p">(</span><span class="n">info</span><span class="p">,</span> <span class="s2">&quot;contracts/buildings.yml&quot;</span><span class="p">)</span>
+</code></pre></div>
 
 
 

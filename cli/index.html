@@ -465,6 +465,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#geoassert-dbt-list" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        geoassert dbt list
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#geoassert-dbt-validate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        geoassert dbt validate
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#geoassert-geoparquet-check" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -651,6 +673,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#geoassert-dbt-list" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        geoassert dbt list
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#geoassert-dbt-validate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        geoassert dbt validate
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#geoassert-geoparquet-check" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -784,6 +828,45 @@
 </tr>
 </tbody>
 </table>
+<p><strong>Warehouse options</strong> (used when <code>PATH</code> is a warehouse URI):</p>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--geom-col</code></td>
+<td>Geometry column name (default: <code>geometry</code>)</td>
+</tr>
+<tr>
+<td><code>--dsn</code></td>
+<td>PostgreSQL DSN for PostGIS sources (alternative to embedding credentials in the URI)</td>
+</tr>
+<tr>
+<td><code>--bq-project</code></td>
+<td>GCP project ID override for BigQuery sources</td>
+</tr>
+<tr>
+<td><code>--sf-account</code></td>
+<td>Snowflake account identifier</td>
+</tr>
+<tr>
+<td><code>--sf-user</code></td>
+<td>Snowflake username</td>
+</tr>
+<tr>
+<td><code>--sf-password</code></td>
+<td>Snowflake password</td>
+</tr>
+<tr>
+<td><code>--sf-warehouse</code></td>
+<td>Snowflake virtual warehouse name</td>
+</tr>
+</tbody>
+</table>
 <p><strong>Exit codes</strong></p>
 <table>
 <thead>
@@ -819,38 +902,156 @@
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Basic validation</span>
 <a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>geoassert<span class="w"> </span>validate<span class="w"> </span>data/buildings.parquet<span class="w"> </span>--contract<span class="w"> </span>contracts/buildings.yml
 <a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># GitHub Actions annotations</span>
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>geoassert<span class="w"> </span>validate<span class="w"> </span>data/buildings.parquet<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">  </span>--contract<span class="w"> </span>contracts/buildings.yml<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">  </span>--format<span class="w"> </span>github
-<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>
-<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="c1"># JSON output piped to jq</span>
-<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>geoassert<span class="w"> </span>validate<span class="w"> </span>data/buildings.parquet<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="w">  </span>--contract<span class="w"> </span>contracts/buildings.yml<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="w">  </span>--format<span class="w"> </span>json<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span><span class="s1">&#39;.failures[]&#39;</span>
-<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>
-<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="c1"># JUnit XML for CI test reporters, plus console output</span>
-<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a>geoassert<span class="w"> </span>validate<span class="w"> </span>data/buildings.parquet<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a><span class="w">  </span>--contract<span class="w"> </span>contracts/buildings.yml<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a><span class="w">  </span>--junit-out<span class="w"> </span>test-results/geoassert.xml
-<a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a>
-<a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a><span class="c1"># Sample 10,000 rows for large file attribute checks</span>
-<a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a>geoassert<span class="w"> </span>validate<span class="w"> </span>data/large.parquet<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a><span class="w">  </span>--contract<span class="w"> </span>contracts/large.yml<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-22" name="__codelineno-6-22" href="#__codelineno-6-22"></a><span class="w">  </span>--sample<span class="w"> </span><span class="m">10000</span>
-<a id="__codelineno-6-23" name="__codelineno-6-23" href="#__codelineno-6-23"></a>
-<a id="__codelineno-6-24" name="__codelineno-6-24" href="#__codelineno-6-24"></a><span class="c1"># Fast attribute checks via DuckDB</span>
-<a id="__codelineno-6-25" name="__codelineno-6-25" href="#__codelineno-6-25"></a>geoassert<span class="w"> </span>validate<span class="w"> </span>data/large.parquet<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-26" name="__codelineno-6-26" href="#__codelineno-6-26"></a><span class="w">  </span>--contract<span class="w"> </span>contracts/large.yml<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-6-27" name="__codelineno-6-27" href="#__codelineno-6-27"></a><span class="w">  </span>--engine<span class="w"> </span>duckdb
-<a id="__codelineno-6-28" name="__codelineno-6-28" href="#__codelineno-6-28"></a>
-<a id="__codelineno-6-29" name="__codelineno-6-29" href="#__codelineno-6-29"></a><span class="c1"># Validate an entire directory (runs partition checks too)</span>
-<a id="__codelineno-6-30" name="__codelineno-6-30" href="#__codelineno-6-30"></a>geoassert<span class="w"> </span>validate<span class="w"> </span>data/partitioned/<span class="w"> </span>--contract<span class="w"> </span>contracts/buildings.yml
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># PostGIS table</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>geoassert<span class="w"> </span>validate<span class="w"> </span>postgis://user:pass@host/db/public/buildings<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">  </span>--contract<span class="w"> </span>contracts/buildings.yml
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="c1"># BigQuery table</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>geoassert<span class="w"> </span>validate<span class="w"> </span>bigquery://my-project/my_dataset/buildings<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">  </span>--contract<span class="w"> </span>contracts/buildings.yml
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="c1"># Snowflake table</span>
+<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>geoassert<span class="w"> </span>validate<span class="w"> </span>snowflake://myaccount/MY_DB/PUBLIC/BUILDINGS<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="w">  </span>--contract<span class="w"> </span>contracts/buildings.yml<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a><span class="w">  </span>--sf-user<span class="w"> </span>myuser<span class="w"> </span>--sf-password<span class="w"> </span>secret
+<a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a>
+<a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a><span class="c1"># GitHub Actions annotations</span>
+<a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a>geoassert<span class="w"> </span>validate<span class="w"> </span>data/buildings.parquet<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a><span class="w">  </span>--contract<span class="w"> </span>contracts/buildings.yml<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a><span class="w">  </span>--format<span class="w"> </span>github
+<a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a>
+<a id="__codelineno-6-22" name="__codelineno-6-22" href="#__codelineno-6-22"></a><span class="c1"># JSON output piped to jq</span>
+<a id="__codelineno-6-23" name="__codelineno-6-23" href="#__codelineno-6-23"></a>geoassert<span class="w"> </span>validate<span class="w"> </span>data/buildings.parquet<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-24" name="__codelineno-6-24" href="#__codelineno-6-24"></a><span class="w">  </span>--contract<span class="w"> </span>contracts/buildings.yml<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-25" name="__codelineno-6-25" href="#__codelineno-6-25"></a><span class="w">  </span>--format<span class="w"> </span>json<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span><span class="s1">&#39;.failures[]&#39;</span>
+<a id="__codelineno-6-26" name="__codelineno-6-26" href="#__codelineno-6-26"></a>
+<a id="__codelineno-6-27" name="__codelineno-6-27" href="#__codelineno-6-27"></a><span class="c1"># JUnit XML for CI test reporters, plus console output</span>
+<a id="__codelineno-6-28" name="__codelineno-6-28" href="#__codelineno-6-28"></a>geoassert<span class="w"> </span>validate<span class="w"> </span>data/buildings.parquet<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-29" name="__codelineno-6-29" href="#__codelineno-6-29"></a><span class="w">  </span>--contract<span class="w"> </span>contracts/buildings.yml<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-30" name="__codelineno-6-30" href="#__codelineno-6-30"></a><span class="w">  </span>--junit-out<span class="w"> </span>test-results/geoassert.xml
+<a id="__codelineno-6-31" name="__codelineno-6-31" href="#__codelineno-6-31"></a>
+<a id="__codelineno-6-32" name="__codelineno-6-32" href="#__codelineno-6-32"></a><span class="c1"># Sample 10,000 rows for large file attribute checks</span>
+<a id="__codelineno-6-33" name="__codelineno-6-33" href="#__codelineno-6-33"></a>geoassert<span class="w"> </span>validate<span class="w"> </span>data/large.parquet<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-34" name="__codelineno-6-34" href="#__codelineno-6-34"></a><span class="w">  </span>--contract<span class="w"> </span>contracts/large.yml<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-35" name="__codelineno-6-35" href="#__codelineno-6-35"></a><span class="w">  </span>--sample<span class="w"> </span><span class="m">10000</span>
+<a id="__codelineno-6-36" name="__codelineno-6-36" href="#__codelineno-6-36"></a>
+<a id="__codelineno-6-37" name="__codelineno-6-37" href="#__codelineno-6-37"></a><span class="c1"># Fast attribute checks via DuckDB</span>
+<a id="__codelineno-6-38" name="__codelineno-6-38" href="#__codelineno-6-38"></a>geoassert<span class="w"> </span>validate<span class="w"> </span>data/large.parquet<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-39" name="__codelineno-6-39" href="#__codelineno-6-39"></a><span class="w">  </span>--contract<span class="w"> </span>contracts/large.yml<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-40" name="__codelineno-6-40" href="#__codelineno-6-40"></a><span class="w">  </span>--engine<span class="w"> </span>duckdb
+<a id="__codelineno-6-41" name="__codelineno-6-41" href="#__codelineno-6-41"></a>
+<a id="__codelineno-6-42" name="__codelineno-6-42" href="#__codelineno-6-42"></a><span class="c1"># Validate an entire directory (runs partition checks too)</span>
+<a id="__codelineno-6-43" name="__codelineno-6-43" href="#__codelineno-6-43"></a>geoassert<span class="w"> </span>validate<span class="w"> </span>data/partitioned/<span class="w"> </span>--contract<span class="w"> </span>contracts/buildings.yml
+</code></pre></div>
+<hr />
+<h2 id="geoassert-dbt-list"><code>geoassert dbt list</code><a class="headerlink" href="#geoassert-dbt-list" title="Permanent link">&para;</a></h2>
+<p>List all models found in the dbt <code>manifest.json</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>geoassert<span class="w"> </span>dbt<span class="w"> </span>list<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--project-dir</code>, <code>-p</code></td>
+<td>current directory</td>
+<td>dbt project root containing <code>target/manifest.json</code></td>
+</tr>
+<tr>
+<td><code>--format</code>, <code>-f</code></td>
+<td><code>text</code></td>
+<td>Output format: <code>text</code> | <code>json</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>geoassert<span class="w"> </span>dbt<span class="w"> </span>list
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>geoassert<span class="w"> </span>dbt<span class="w"> </span>list<span class="w"> </span>--project-dir<span class="w"> </span>/path/to/dbt/project<span class="w"> </span>--format<span class="w"> </span>json
+</code></pre></div>
+<hr />
+<h2 id="geoassert-dbt-validate"><code>geoassert dbt validate</code><a class="headerlink" href="#geoassert-dbt-validate" title="Permanent link">&para;</a></h2>
+<p>Validate a dbt model output against a contract. The model is located in the manifest; its materialization determines where the data is read from.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>geoassert<span class="w"> </span>dbt<span class="w"> </span>validate<span class="w"> </span>MODEL_NAME<span class="w"> </span>--contract<span class="w"> </span>CONTRACT<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--contract</code>, <code>-c</code></td>
+<td><strong>required</strong></td>
+<td>Path to the contract YAML</td>
+</tr>
+<tr>
+<td><code>--project-dir</code>, <code>-p</code></td>
+<td>current directory</td>
+<td>dbt project root</td>
+</tr>
+<tr>
+<td><code>--format</code>, <code>-f</code></td>
+<td><code>text</code></td>
+<td>Output format: <code>text</code> | <code>json</code> | <code>markdown</code> | <code>github</code> | <code>junit</code></td>
+</tr>
+<tr>
+<td><code>--fail-on-warn</code></td>
+<td><code>false</code></td>
+<td>Exit 1 on warnings</td>
+</tr>
+<tr>
+<td><code>--sample</code>, <code>-n</code></td>
+<td>—</td>
+<td>Row limit for row-level checks</td>
+</tr>
+<tr>
+<td><code>--engine</code>, <code>-e</code></td>
+<td><code>pyarrow</code></td>
+<td>Compute engine: <code>pyarrow</code> | <code>duckdb</code></td>
+</tr>
+<tr>
+<td><code>--dsn</code></td>
+<td>—</td>
+<td>PostgreSQL DSN for PostGIS-materialised models</td>
+</tr>
+<tr>
+<td><code>--path</code></td>
+<td>—</td>
+<td>Direct file path override (Parquet file for this model)</td>
+</tr>
+<tr>
+<td><code>--junit-out</code></td>
+<td>—</td>
+<td>Write JUnit XML to this file</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Examples</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Validate a model discovered from the manifest</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>geoassert<span class="w"> </span>dbt<span class="w"> </span>validate<span class="w"> </span>buildings<span class="w"> </span>--contract<span class="w"> </span>contracts/buildings.yml
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="c1"># Validate a PostGIS-materialised model</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>geoassert<span class="w"> </span>dbt<span class="w"> </span>validate<span class="w"> </span>buildings<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">  </span>--contract<span class="w"> </span>contracts/buildings.yml<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="w">  </span>--dsn<span class="w"> </span>postgresql://user:pass@host/db
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="c1"># Override the file path directly</span>
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>geoassert<span class="w"> </span>dbt<span class="w"> </span>validate<span class="w"> </span>buildings<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="w">  </span>--contract<span class="w"> </span>contracts/buildings.yml<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="w">  </span>--path<span class="w"> </span>exports/buildings.parquet
 </code></pre></div>
 <hr />
 <h2 id="geoassert-geoparquet-check"><code>geoassert geoparquet check</code><a class="headerlink" href="#geoassert-geoparquet-check" title="Permanent link">&para;</a></h2>
 <p>Run GeoParquet metadata checks on a file without a contract.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>geoassert<span class="w"> </span>geoparquet<span class="w"> </span>check<span class="w"> </span>PATH<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>geoassert<span class="w"> </span>geoparquet<span class="w"> </span>check<span class="w"> </span>PATH<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
 </code></pre></div>
 <table>
 <thead>
@@ -869,7 +1070,7 @@
 </tbody>
 </table>
 <p><strong>Example</strong></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>geoassert<span class="w"> </span>geoparquet<span class="w"> </span>check<span class="w"> </span>data/buildings.parquet
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>geoassert<span class="w"> </span>geoparquet<span class="w"> </span>check<span class="w"> </span>data/buildings.parquet
 </code></pre></div>
 <p>Useful as a quick sanity check on any GeoParquet file — no contract needed.</p>
 

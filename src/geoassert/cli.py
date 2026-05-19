@@ -49,7 +49,7 @@ def _main(
     pass
 
 
-_FORMAT_HELP = "Output format: text | json | markdown | github | junit"
+_FORMAT_HELP = "Output format: text | json | markdown | html | github | junit"
 
 
 @app.command()
@@ -125,6 +125,11 @@ def validate(
         "--junit-out",
         help="Write JUnit XML to this file (in addition to the chosen --format output).",
     ),
+    report_out: Path | None = typer.Option(
+        None,
+        "--report-out",
+        help="Write the formatted report to this file (format determined by --format).",
+    ),
     # Warehouse connection options
     dsn: str | None = typer.Option(None, "--dsn", help="PostgreSQL DSN for PostGIS sources."),
     geom_col: str = typer.Option(
@@ -153,11 +158,13 @@ def validate(
 
     # Warehouse URI dispatch
     if path.startswith(("postgis://", "postgresql://")):
-        _validate_postgis(path, loaded, format, fail_on_warn, sample, geom_col, junit_out)
+        _validate_postgis(
+            path, loaded, format, fail_on_warn, sample, geom_col, junit_out, report_out
+        )
         return
     if path.startswith("bigquery://"):
         _validate_bigquery(
-            path, loaded, format, fail_on_warn, sample, geom_col, bq_project, junit_out
+            path, loaded, format, fail_on_warn, sample, geom_col, bq_project, junit_out, report_out
         )
         return
     if path.startswith("snowflake://"):
@@ -173,12 +180,15 @@ def validate(
             sf_password,
             sf_warehouse,
             junit_out,
+            report_out,
         )
         return
 
     local_path = Path(path)
     if local_path.is_dir():
-        _validate_directory(local_path, loaded, format, fail_on_warn, sample, engine, junit_out)
+        _validate_directory(
+            local_path, loaded, format, fail_on_warn, sample, engine, junit_out, report_out
+        )
         return
 
     from geoassert.runner import run_validation
@@ -199,6 +209,9 @@ def validate(
 
         junit_out.write_text(render_junit(result), encoding="utf-8")
 
+    if report_out is not None:
+        _write_report_file(result, format, report_out)
+
     if not result.passed:
         raise typer.Exit(1)
     if fail_on_warn and result.warnings:
@@ -213,6 +226,7 @@ def _validate_directory(
     sample: int | None,
     engine: str,
     junit_out: Path | None,
+    report_out: Path | None = None,
 ) -> None:
     from geoassert.runner import validate_directory
 
@@ -244,6 +258,9 @@ def _validate_directory(
         # Write only the last file result; directory result is first
         junit_out.write_text(render_junit(results[-1]), encoding="utf-8")
 
+    if report_out is not None:
+        _write_report_file(results[-1], format, report_out)
+
     if any_failed:
         raise typer.Exit(1)
     if fail_on_warn and any_warned:
@@ -258,6 +275,7 @@ def _validate_postgis(
     sample: int | None,
     geom_col: str,
     junit_out: Path | None,
+    report_out: Path | None = None,
 ) -> None:
     """Validate a PostGIS table via postgis:// or postgresql:// URI."""
     from urllib.parse import urlparse
@@ -290,6 +308,8 @@ def _validate_postgis(
         from geoassert.reports.junit import render_junit
 
         junit_out.write_text(render_junit(result), encoding="utf-8")
+    if report_out is not None:
+        _write_report_file(result, format, report_out)
     if not result.passed:
         raise typer.Exit(1)
     if fail_on_warn and result.warnings:
@@ -305,6 +325,7 @@ def _validate_bigquery(
     geom_col: str,
     bq_project: str | None,
     junit_out: Path | None,
+    report_out: Path | None = None,
 ) -> None:
     """Validate a BigQuery table via bigquery://project/dataset/table URI."""
     from urllib.parse import urlparse
@@ -335,6 +356,8 @@ def _validate_bigquery(
         from geoassert.reports.junit import render_junit
 
         junit_out.write_text(render_junit(result), encoding="utf-8")
+    if report_out is not None:
+        _write_report_file(result, format, report_out)
     if not result.passed:
         raise typer.Exit(1)
     if fail_on_warn and result.warnings:
@@ -353,6 +376,7 @@ def _validate_snowflake(
     sf_password: str | None,
     sf_warehouse: str | None,
     junit_out: Path | None,
+    report_out: Path | None = None,
 ) -> None:
     """Validate a Snowflake table via snowflake://account/database/schema/table URI."""
     from urllib.parse import urlparse
@@ -399,6 +423,8 @@ def _validate_snowflake(
         from geoassert.reports.junit import render_junit
 
         junit_out.write_text(render_junit(result), encoding="utf-8")
+    if report_out is not None:
+        _write_report_file(result, format, report_out)
     if not result.passed:
         raise typer.Exit(1)
     if fail_on_warn and result.warnings:
@@ -542,6 +568,8 @@ def _emit_result(result: object, format: str, out: Console) -> None:
         out.print_json(result.to_json())
     elif format in ("markdown", "md"):
         out.print(result.to_markdown(), highlight=False)
+    elif format == "html":
+        out.print(result.to_html(), highlight=False)
     elif format == "github":
         from geoassert.reports.github import render_github_annotations
 
@@ -552,6 +580,24 @@ def _emit_result(result: object, format: str, out: Console) -> None:
         out.print(render_junit(result), highlight=False)
     else:
         _print_validation_result(result)
+
+
+def _write_report_file(result: object, format: str, path: Path) -> None:
+    """Write the formatted report to *path* on disk."""
+    from geoassert.reports.junit import render_junit
+    from geoassert.result import ValidationResult
+
+    assert isinstance(result, ValidationResult)
+    if format == "json":
+        path.write_text(result.to_json(), encoding="utf-8")
+    elif format in ("markdown", "md"):
+        path.write_text(result.to_markdown(), encoding="utf-8")
+    elif format == "html":
+        path.write_text(result.to_html(), encoding="utf-8")
+    elif format == "junit":
+        path.write_text(render_junit(result), encoding="utf-8")
+    else:
+        path.write_text(result.to_markdown(), encoding="utf-8")
 
 
 @geoparquet_app.command("check")

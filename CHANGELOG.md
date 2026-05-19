@@ -11,6 +11,45 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ---
 
+## [0.2.0] — Unreleased
+
+### Added
+
+**Stronger YAML schema validation**
+- `geometry.crs` must be in `AUTHORITY:CODE` format (e.g. `EPSG:4326`)
+- `geometry.type` values validated against the WKT geometry type set
+- `bounds.within.bbox` must have exactly 4 values with `minx < maxx` and `miny < maxy`
+- `attributes.<col>.min` must be ≤ `max` when both are provided
+
+**Pre-commit hook**
+- `.pre-commit-hooks.yaml` — `geoassert-validate` and `geoassert-geoparquet-check` hooks for use with [pre-commit](https://pre-commit.com/)
+
+**JUnit XML output**
+- `--format junit` on `geoassert validate` emits JUnit XML to stdout
+- `--junit-out <path>` writes JUnit XML to a file alongside any other format (useful for GitHub Actions test reporters)
+
+**Richer Markdown reports**
+- Summary stats table: checks run / passed / warnings / failed / skipped
+- Checks grouped by category (geoparquet, crs, bounds, geometry, attributes)
+
+**Sampling support for large files**
+- `--sample N` on `geoassert validate` limits row-level checks (attributes, geometry validity/type/empty) to a random sample of N rows
+- Metadata-only checks (CRS, bounds, GeoParquet metadata) always run against the full file
+
+**Configurable severity**
+- `severity:` section in contract YAML allows per-check severity overrides:
+  ```yaml
+  severity:
+    crs.match: warn        # downgrade CRS mismatch from error to warn
+    geometry.valid: error  # enforce geometry validity as an error
+  ```
+
+### Fixed
+- `GeometryTypeCheck` used `shapely.get_type_id().__class__.__name__` which always returned `"int"`; fixed to use `g.geom_type`
+- `_make_geo_metadata` in test helpers used `geometry_types or ["Point"]` which coerced an empty list to `["Point"]`
+
+---
+
 ## [0.1.0] — Unreleased
 
 Initial release.

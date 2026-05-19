@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+import random
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -22,6 +23,7 @@ class DatasetInfo:
     metadata: dict[bytes, bytes] = field(default_factory=dict)
     geo_metadata: dict[str, Any] | None = None
     parquet_metadata: Any | None = None  # pq.FileMetaData
+    sample: int | None = None  # row limit for row-level checks
 
 
 def read_geoparquet_info(path: Path | str) -> DatasetInfo:
@@ -58,3 +60,12 @@ def read_table(path: Path | str, columns: list[str] | None = None) -> pa.Table:
         return pq.read_table(path, columns=columns)
     except Exception as exc:
         raise DataReadError(f"Cannot read {path}: {exc}") from exc
+
+
+def read_table_for_check(info: DatasetInfo, columns: list[str] | None = None) -> pa.Table:
+    """Read a table for a check, honouring the sample size set on DatasetInfo."""
+    table = read_table(info.path, columns=columns)
+    if info.sample is not None and len(table) > info.sample:
+        indices = sorted(random.sample(range(len(table)), info.sample))
+        return table.take(indices)
+    return table

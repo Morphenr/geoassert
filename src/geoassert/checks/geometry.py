@@ -47,11 +47,11 @@ class GeometryTypeCheck(BaseCheck):
                 message="Skipped: no geometry.type constraint in contract.",
             )
 
-        from geoassert.engines.pyarrow import read_table
+        from geoassert.engines.pyarrow import read_table_for_check
         from geoassert.engines.shapely import wkb_column_to_geometries
 
         col = contract.geometry.column
-        table = read_table(info.path, columns=[col])
+        table = read_table_for_check(info, columns=[col])
         geoms = wkb_column_to_geometries(table.column(col))
 
         observed_types: set[str] = set()
@@ -86,7 +86,7 @@ class GeometryValidCheck(BaseCheck):
     name = "geometry.valid"
 
     def run(self, info: DatasetInfo, contract: Contract | None = None) -> CheckResult:
-        from geoassert.engines.pyarrow import read_table
+        from geoassert.engines.pyarrow import read_table_for_check
         from geoassert.engines.shapely import count_invalid, wkb_column_to_geometries
 
         col = contract.geometry.column if contract and contract.geometry else "geometry"
@@ -98,7 +98,7 @@ class GeometryValidCheck(BaseCheck):
                 message=f"Skipped: column {col!r} not in schema.",
             )
 
-        table = read_table(info.path, columns=[col])
+        table = read_table_for_check(info, columns=[col])
         geoms = wkb_column_to_geometries(table.column(col))
         n_invalid = count_invalid(geoms)
 
@@ -143,10 +143,10 @@ class GeometryEmptyCheck(BaseCheck):
                 message=f"Skipped: column {col!r} not in schema.",
             )
 
-        from geoassert.engines.pyarrow import read_table
+        from geoassert.engines.pyarrow import read_table_for_check
         from geoassert.engines.shapely import count_empty, wkb_column_to_geometries
 
-        table = read_table(info.path, columns=[col])
+        table = read_table_for_check(info, columns=[col])
         geoms = wkb_column_to_geometries(table.column(col))
         n_empty = count_empty(geoms)
 

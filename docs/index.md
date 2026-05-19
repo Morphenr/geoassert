@@ -1,10 +1,28 @@
 # geoassert
 
-**Data contracts for geospatial pipelines.**
+**Validate GeoParquet files before bad data reaches production.**
 
-`geoassert` validates GeoParquet and other geospatial datasets before bad geometry, CRS mistakes, broken metadata, or spatial coverage gaps reach downstream maps, models, and analytics.
+`geoassert` is a Python library and CLI that runs contract-based validation on geospatial datasets — GeoParquet files, PostGIS tables, BigQuery GIS tables, Snowflake geometry columns, and dbt model outputs. It catches CRS mismatches, broken metadata, invalid geometries, out-of-bounds data, and attribute problems before they silently corrupt downstream maps, models, and analytics.
+
+```bash
+pip install geoassert
+geoassert validate data/buildings.parquet --contract contracts/buildings.yml
+```
 
 ![geoassert demo](../demo/demo.gif)
+
+---
+
+## Why geoassert?
+
+Geospatial data fails in ways general-purpose validators don't understand:
+
+- A GeoParquet file with an empty or stale bounding box in its metadata
+- A CRS that looks right but has swapped lat/lon axes  
+- A PostGIS export where 3% of polygons are topologically invalid
+- A partitioned dataset where one month quietly changed schema
+
+`geoassert` sits above GeoPandas, Shapely, and PyArrow as a **lightweight validation layer** — fast enough to run in every CI job, specific enough to catch the problems that matter.
 
 ---
 
@@ -14,12 +32,14 @@
 pip install geoassert
 ```
 
-Optional extras for richer checks:
+Optional extras:
 
 ```bash
 pip install "geoassert[shapely]"    # geometry validity and type checks
-pip install "geoassert[duckdb]"     # fast attribute checks via DuckDB
-pip install "geoassert[geopandas]"  # broader file format support
+pip install "geoassert[duckdb]"     # scalable attribute checks via DuckDB SQL
+pip install "geoassert[postgis]"    # validate PostGIS tables directly
+pip install "geoassert[bigquery]"   # validate BigQuery GIS tables
+pip install "geoassert[snowflake]"  # validate Snowflake geometry columns
 pip install "geoassert[all]"        # everything
 ```
 
@@ -27,27 +47,17 @@ pip install "geoassert[all]"        # everything
 
 ## Thirty-second example
 
+A sample dataset and contract are bundled in the repository:
+
 ```bash
-# Profile a dataset
-geoassert profile data/buildings.parquet
+git clone https://github.com/Morphenr/geoassert
+cd geoassert
+pip install "geoassert[shapely]"
 
-# Generate a starter contract
-geoassert init-contract data/buildings.parquet > contracts/buildings.yml
-
-# Validate against the contract
 geoassert validate data/buildings.parquet --contract contracts/buildings.yml
 ```
 
-```python
-import geoassert as ga
-
-result = ga.validate(
-    "data/buildings.parquet",
-    contract="contracts/buildings.yml",
-)
-if not result.passed:
-    print(result.to_markdown())
-```
+→ Full walkthrough: [Quickstart](quickstart.md)
 
 ---
 
@@ -76,8 +86,12 @@ if not result.passed:
 
 ---
 
-## Why geoassert?
+## Roadmap
 
-Geospatial data breaks in specific, quiet ways: a CRS that looks right but has swapped axes, an exported GeoParquet file with an empty bbox, a partitioned dataset where one month silently changed schema. General-purpose data quality tools don't understand these failure modes.
-
-`geoassert` is not a GIS analysis library. It sits above GeoPandas, Shapely, and PyArrow as a thin validation layer — lightweight enough to run in every CI job, specific enough to catch the problems that matter in geospatial pipelines.
+| Version | Status | Highlights |
+|---|---|---|
+| **v0.1** | ✅ shipped | Core checks: GeoParquet, CRS, bounds, geometry, attributes |
+| **v0.2** | ✅ shipped | GitHub Actions annotations, JUnit XML, sampling, severity control |
+| **v0.3** | ✅ shipped | DuckDB backend, cloud paths, partition validation, row group checks |
+| **v0.4** | ✅ shipped | PostGIS, BigQuery GIS, Snowflake; dbt integration; `validate_source()` API |
+| **v0.5** | planned | Spatial drift checks, H3 coverage validation, HTML reports |

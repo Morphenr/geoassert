@@ -1,4 +1,4 @@
-"""Tests for v0.6 geometry semantic checks: Z dimensions and antimeridian."""
+"""Tests for geometry semantic checks: Z dimensions and antimeridian."""
 
 from __future__ import annotations
 

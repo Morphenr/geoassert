@@ -6,9 +6,7 @@ from pathlib import Path
 
 from geoassert.checks.bounds import BoundsAvailableCheck, BoundsWithinCheck, run_bounds_checks
 from geoassert.engines.pyarrow import read_geoparquet_info
-
 from tests.conftest import make_contract, write_test_geoparquet
-
 
 # ── BoundsAvailableCheck ──────────────────────────────────────────────────────
 

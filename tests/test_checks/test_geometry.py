@@ -20,7 +20,6 @@ from geoassert.checks.geometry import (
     run_geometry_checks,
 )
 from geoassert.engines.pyarrow import read_geoparquet_info
-
 from tests.conftest import make_contract, write_test_geoparquet
 
 shapely = pytest.importorskip("shapely")
@@ -91,9 +90,7 @@ def test_geometry_column_exists_fails_for_wrong_column_name(tmp_path: Path) -> N
 
 
 def test_geometry_column_exists_passes_when_contract_column_present(tmp_path: Path) -> None:
-    info = read_geoparquet_info(
-        write_test_geoparquet(tmp_path / "ok.parquet", column="geom")
-    )
+    info = read_geoparquet_info(write_test_geoparquet(tmp_path / "ok.parquet", column="geom"))
     contract = make_contract(geometry={"column": "geom"})
     result = GeometryColumnExistsCheck().run(info, contract)
     assert result.status == "pass"

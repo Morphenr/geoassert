@@ -6,9 +6,7 @@ from pathlib import Path
 
 from geoassert.checks.crs import CRSExistsCheck, CRSMatchCheck, run_crs_checks
 from geoassert.engines.pyarrow import read_geoparquet_info
-
 from tests.conftest import make_contract, write_test_geoparquet
-
 
 # ── CRSExistsCheck ────────────────────────────────────────────────────────────
 

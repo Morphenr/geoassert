@@ -18,9 +18,7 @@ from geoassert.checks.geoparquet import (
     run_metadata_checks,
 )
 from geoassert.engines.pyarrow import read_geoparquet_info
-
 from tests.conftest import write_test_geoparquet
-
 
 # ── GeoMetadataCheck ──────────────────────────────────────────────────────────
 
@@ -168,9 +166,7 @@ def test_all_fail_or_skip_for_plain_parquet(tmp_path: Path) -> None:
     statuses = {r.check: r.status for r in run_metadata_checks(info)}
     assert statuses["geoparquet.geo_metadata"] == "fail"
     assert all(
-        s in ("skip", "fail")
-        for check, s in statuses.items()
-        if check != "geoparquet.geo_metadata"
+        s in ("skip", "fail") for check, s in statuses.items() if check != "geoparquet.geo_metadata"
     )
 
 

@@ -14,9 +14,7 @@ from geoassert.checks.attributes import (
     run_attribute_checks,
 )
 from geoassert.engines.pyarrow import read_geoparquet_info
-
 from tests.conftest import make_contract, write_test_geoparquet
-
 
 # ── AttributeExistsCheck ──────────────────────────────────────────────────────
 
@@ -187,9 +185,7 @@ def test_run_attribute_checks_fail_for_missing_column(tmp_path: Path) -> None:
 
 def test_run_attribute_checks_fail_for_null_violation(tmp_path: Path) -> None:
     info = read_geoparquet_info(
-        write_test_geoparquet(
-            tmp_path / "nulls.parquet", extra_columns={"name": ["a", None, "c"]}
-        )
+        write_test_geoparquet(tmp_path / "nulls.parquet", extra_columns={"name": ["a", None, "c"]})
     )
     contract = make_contract(attributes={"name": {"nullable": False}})
     statuses = {r.check: r.status for r in run_attribute_checks(info, contract)}

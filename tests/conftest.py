@@ -12,14 +12,8 @@ import pyarrow.parquet as pq
 import pytest
 
 from geoassert.contracts.schema import (
-    AttributeContract,
-    BoundsContract,
-    BoundsWithinConfig,
     Contract,
-    GeometryContract,
-    SourceConfig,
 )
-
 
 # ── WKB helpers ───────────────────────────────────────────────────────────────
 

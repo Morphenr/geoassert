@@ -1,30 +1,126 @@
-name: Publish to PyPI
+name: Publish
 
+# Triggered when a GitHub Release is published (tag must be v*)
 on:
   release:
     types: [published]
 
 jobs:
+  # ── 1. Build sdist + wheel ────────────────────────────────────────────────
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: astral-sh/setup-uv@v6
-      - run: uv build
-      - uses: actions/upload-artifact@v4
+
+      - name: Build distributions
+        run: uv build
+
+      - name: Store distributions
+        uses: actions/upload-artifact@v4
         with:
           name: dist
           path: dist/
+          if-no-files-found: error
 
-  publish:
+  # ── 2. Publish to TestPyPI ────────────────────────────────────────────────
+  #
+  # Authentication: OIDC trusted publisher — no secrets needed.
+  # One-time setup on test.pypi.org:
+  #   Account → Publishing → Add a new publisher
+  #     Owner:       Morphenr
+  #     Repository:  geoassert
+  #     Workflow:    publish.yml
+  #     Environment: testpypi
+  publish-testpypi:
     needs: build
     runs-on: ubuntu-latest
-    environment: pypi
+    environment: testpypi
     permissions:
-      id-token: write   # required for OIDC trusted publisher
+      id-token: write
     steps:
       - uses: actions/download-artifact@v4
         with:
           name: dist
           path: dist/
-      - uses: pypa/gh-action-pypi-publish@release/v1
+
+      - name: Publish to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+  # ── 3. Verify the TestPyPI release ───────────────────────────────────────
+  #
+  # Installs the freshly published package from TestPyPI into a clean venv
+  # and runs a basic smoke test before the real PyPI gate can open.
+  verify-testpypi:
+    needs: publish-testpypi
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract version from release tag
+        id: version
+        # Tags are "v0.2.0"; strip the leading "v"
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for TestPyPI propagation
+        # TestPyPI can take up to ~60 s to serve a new release
+        run: sleep 60
+
+      - name: Install from TestPyPI in a clean venv (with retry)
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          python -m venv .venv
+          for i in 1 2 3; do
+            .venv/bin/pip install \
+              --index-url https://test.pypi.org/simple/ \
+              --extra-index-url https://pypi.org/simple/ \
+              "geoassert==${VERSION}" && break
+            echo "Attempt $i failed — waiting 30 s before retry…"
+            sleep 30
+          done
+
+      - name: Smoke test — CLI
+        run: .venv/bin/geoassert --version
+
+      - name: Smoke test — Python import and version match
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          .venv/bin/python - <<'EOF'
+          import geoassert, sys, os
+          expected = os.environ["VERSION"]
+          actual   = geoassert.__version__
+          if actual != expected:
+              print(f"Version mismatch: expected {expected!r}, got {actual!r}", file=sys.stderr)
+              sys.exit(1)
+          print(f"OK — geoassert {actual} installed from TestPyPI")
+          EOF
+
+  # ── 4. Publish to PyPI (manual approval gate) ─────────────────────────────
+  #
+  # This job is blocked until a reviewer approves it in the GitHub UI.
+  # Set up the gate: repo Settings → Environments → pypi → Required reviewers.
+  #
+  # Authentication: OIDC trusted publisher — no secrets needed.
+  # One-time setup on pypi.org:
+  #   Account → Publishing → Add a new publisher
+  #     Owner:       Morphenr
+  #     Repository:  geoassert
+  #     Workflow:    publish.yml
+  #     Environment: pypi
+  publish-pypi:
+    needs: verify-testpypi
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1

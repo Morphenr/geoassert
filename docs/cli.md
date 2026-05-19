@@ -70,6 +70,18 @@ geoassert validate PATH --contract CONTRACT [OPTIONS]
 | `--fail-on-warn` | `false` | Exit 1 when warnings are present |
 | `--junit-out` | — | Write JUnit XML to this file alongside the main output format |
 
+**Warehouse options** (used when `PATH` is a warehouse URI):
+
+| Option | Description |
+|---|---|
+| `--geom-col` | Geometry column name (default: `geometry`) |
+| `--dsn` | PostgreSQL DSN for PostGIS sources (alternative to embedding credentials in the URI) |
+| `--bq-project` | GCP project ID override for BigQuery sources |
+| `--sf-account` | Snowflake account identifier |
+| `--sf-user` | Snowflake username |
+| `--sf-password` | Snowflake password |
+| `--sf-warehouse` | Snowflake virtual warehouse name |
+
 **Exit codes**
 
 | Code | Meaning |
@@ -85,6 +97,19 @@ geoassert validate PATH --contract CONTRACT [OPTIONS]
 ```bash
 # Basic validation
 geoassert validate data/buildings.parquet --contract contracts/buildings.yml
+
+# PostGIS table
+geoassert validate postgis://user:pass@host/db/public/buildings \
+  --contract contracts/buildings.yml
+
+# BigQuery table
+geoassert validate bigquery://my-project/my_dataset/buildings \
+  --contract contracts/buildings.yml
+
+# Snowflake table
+geoassert validate snowflake://myaccount/MY_DB/PUBLIC/BUILDINGS \
+  --contract contracts/buildings.yml \
+  --sf-user myuser --sf-password secret
 
 # GitHub Actions annotations
 geoassert validate data/buildings.parquet \
@@ -113,6 +138,67 @@ geoassert validate data/large.parquet \
 
 # Validate an entire directory (runs partition checks too)
 geoassert validate data/partitioned/ --contract contracts/buildings.yml
+```
+
+---
+
+## `geoassert dbt list`
+
+List all models found in the dbt `manifest.json`.
+
+```bash
+geoassert dbt list [OPTIONS]
+```
+
+| Option | Default | Description |
+|---|---|---|
+| `--project-dir`, `-p` | current directory | dbt project root containing `target/manifest.json` |
+| `--format`, `-f` | `text` | Output format: `text` \| `json` |
+
+**Example**
+
+```bash
+geoassert dbt list
+geoassert dbt list --project-dir /path/to/dbt/project --format json
+```
+
+---
+
+## `geoassert dbt validate`
+
+Validate a dbt model output against a contract. The model is located in the manifest; its materialization determines where the data is read from.
+
+```bash
+geoassert dbt validate MODEL_NAME --contract CONTRACT [OPTIONS]
+```
+
+| Option | Default | Description |
+|---|---|---|
+| `--contract`, `-c` | **required** | Path to the contract YAML |
+| `--project-dir`, `-p` | current directory | dbt project root |
+| `--format`, `-f` | `text` | Output format: `text` \| `json` \| `markdown` \| `github` \| `junit` |
+| `--fail-on-warn` | `false` | Exit 1 on warnings |
+| `--sample`, `-n` | — | Row limit for row-level checks |
+| `--engine`, `-e` | `pyarrow` | Compute engine: `pyarrow` \| `duckdb` |
+| `--dsn` | — | PostgreSQL DSN for PostGIS-materialised models |
+| `--path` | — | Direct file path override (Parquet file for this model) |
+| `--junit-out` | — | Write JUnit XML to this file |
+
+**Examples**
+
+```bash
+# Validate a model discovered from the manifest
+geoassert dbt validate buildings --contract contracts/buildings.yml
+
+# Validate a PostGIS-materialised model
+geoassert dbt validate buildings \
+  --contract contracts/buildings.yml \
+  --dsn postgresql://user:pass@host/db
+
+# Override the file path directly
+geoassert dbt validate buildings \
+  --contract contracts/buildings.yml \
+  --path exports/buildings.parquet
 ```
 
 ---

@@ -47,3 +47,8 @@ class ValidationResult:
         from geoassert.reports.markdown import render_validation_result
 
         return render_validation_result(self)
+
+    def to_html(self) -> str:
+        from geoassert.reports.html import render_html
+
+        return render_html(self)

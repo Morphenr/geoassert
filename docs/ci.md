@@ -120,7 +120,7 @@ Add `geoassert` as a pre-commit hook to validate datasets before each commit.
 ```yaml
 repos:
   - repo: https://github.com/Morphenr/geoassert
-    rev: v0.3.0
+    rev: v0.4.2
     hooks:
       # Validate against a contract
       - id: geoassert-validate
@@ -140,17 +140,50 @@ The `geoassert-geoparquet-check` hook is contract-free and checks GeoParquet met
 
 ## dbt
 
-A `dbt` integration is planned for a future release. The recommended pattern until then is to run `geoassert` in the CI step that follows `dbt run`:
+`geoassert` has first-class dbt integration. Use `geoassert dbt` commands to discover models from a dbt manifest and validate their outputs directly.
+
+### List models
+
+```yaml
+- name: List dbt models
+  run: |
+    pip install geoassert
+    geoassert dbt list --project-dir .
+```
+
+### Validate a model
 
 ```yaml
 - name: Run dbt
   run: dbt run --target prod
 
-- name: Validate dbt outputs
+- name: Validate dbt model output
   run: |
     pip install geoassert
-    geoassert validate exports/buildings.parquet \
+    geoassert dbt validate buildings \
       --contract contracts/buildings.yml \
+      --format github
+```
+
+If the model materialises to a file, pass its path directly:
+
+```yaml
+- name: Validate dbt model output (file override)
+  run: |
+    geoassert dbt validate buildings \
+      --contract contracts/buildings.yml \
+      --path exports/buildings.parquet \
+      --format github
+```
+
+For PostGIS-materialised models, pass the connection DSN:
+
+```yaml
+- name: Validate PostGIS-materialised dbt model
+  run: |
+    geoassert dbt validate buildings \
+      --contract contracts/buildings.yml \
+      --dsn postgresql://user:pass@host/db \
       --format github
 ```
 

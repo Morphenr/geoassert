@@ -11,6 +11,21 @@ if TYPE_CHECKING:
     from geoassert.contracts.schema import Contract
     from geoassert.engines.pyarrow import DatasetInfo
 
+# Float arithmetic can introduce trailing noise (e.g. 83.2332400000001 instead of 83.23324).
+# _WITHIN_TOL guards BoundsWithinCheck against false positives from such noise.
+# _CONSISTENCY_TOL is the same guard for BboxConsistencyCheck's float-to-float comparison.
+_WITHIN_TOL = 1e-9
+_CONSISTENCY_TOL = 1e-6
+
+
+def _fmt(v: float) -> str:
+    """Format a coordinate, stripping float arithmetic noise beyond 6 decimal places."""
+    return f"{v:.6f}".rstrip("0").rstrip(".")
+
+
+def _fmt_bbox(bbox: list[float]) -> str:
+    return f"[{', '.join(_fmt(v) for v in bbox)}]"
+
 
 def _bbox_from_meta(info: DatasetInfo) -> list[float] | None:
     """Return [minx, miny, maxx, maxy] from GeoParquet metadata, if present."""
@@ -81,12 +96,23 @@ class BoundsWithinCheck(BaseCheck):
         e_minx, e_miny, e_maxx, e_maxy = expected_bbox
         o_minx, o_miny, o_maxx, o_maxy = observed_bbox
 
-        if o_minx < e_minx or o_miny < e_miny or o_maxx > e_maxx or o_maxy > e_maxy:
+        # _WITHIN_TOL absorbs floating-point arithmetic noise (e.g. 83.2332400000001
+        # vs 83.23324 from coordinate reprojection) so near-exact values don't false-positive.
+        exceeds = (
+            o_minx < e_minx - _WITHIN_TOL
+            or o_miny < e_miny - _WITHIN_TOL
+            or o_maxx > e_maxx + _WITHIN_TOL
+            or o_maxy > e_maxy + _WITHIN_TOL
+        )
+        if exceeds:
             return CheckResult(
                 check=self.name,
                 status="fail",
                 severity="error",
-                message="Dataset bounds exceed the expected bbox.",
+                message=(
+                    f"Dataset bounds {_fmt_bbox(observed_bbox)} exceed"
+                    f" expected bbox {_fmt_bbox(expected_bbox)}."
+                ),
                 expected=expected_bbox,
                 observed=observed_bbox,
                 why_it_matters=(
@@ -99,7 +125,10 @@ class BoundsWithinCheck(BaseCheck):
             check=self.name,
             status="pass",
             severity="info",
-            message=f"Dataset bounds {observed_bbox} are within expected bbox {expected_bbox}.",
+            message=(
+                f"Dataset bounds {_fmt_bbox(observed_bbox)} are within"
+                f" expected bbox {_fmt_bbox(expected_bbox)}."
+            ),
         )
 
 
@@ -163,32 +192,74 @@ class BboxConsistencyCheck(BaseCheck):
         actual = [actual_minx, actual_miny, actual_maxx, actual_maxy]
 
         d_minx, d_miny, d_maxx, d_maxy = declared
-        # Tolerance: allow 1e-6 degree (~0.1 m) of floating-point drift
-        tol = 1e-6
-        mismatch = (
-            abs(actual_minx - d_minx) > tol
-            or abs(actual_miny - d_miny) > tol
-            or abs(actual_maxx - d_maxx) > tol
-            or abs(actual_maxy - d_maxy) > tol
+        tol = _CONSISTENCY_TOL
+
+        # "Tight" = declared bbox is smaller than actual extent — data leaks outside the
+        # declared bounds. This is the more dangerous case: consumers using the declared
+        # bbox for spatial filtering will silently miss features.
+        declared_too_tight = (
+            actual_minx < d_minx - tol
+            or actual_miny < d_miny - tol
+            or actual_maxx > d_maxx + tol
+            or actual_maxy > d_maxy + tol
         )
-        if mismatch:
+
+        # "Loose" = declared bbox is larger than actual extent — the metadata overstates
+        # coverage (e.g. declared maxy=90 but data only reaches 83.64). Not a data error,
+        # but stale or over-conservative metadata that may mislead spatial index lookups.
+        declared_too_loose = (
+            actual_minx > d_minx + tol
+            or actual_miny > d_miny + tol
+            or actual_maxx < d_maxx - tol
+            or actual_maxy < d_maxy - tol
+        )
+
+        fmt_declared = _fmt_bbox(declared)
+        fmt_actual = _fmt_bbox(actual)
+
+        if declared_too_tight:
             return CheckResult(
                 check=self.name,
                 status="warn",
                 severity="warn",
-                message="Declared bbox in metadata does not match the actual geometry bounds.",
+                message=(
+                    f"Declared bbox {fmt_declared} is smaller than the actual geometry"
+                    f" extent {fmt_actual} — features fall outside the declared bounds."
+                ),
                 expected=declared,
                 observed=actual,
+                why_it_matters=(
+                    "Spatial index consumers use the declared bbox to skip files."
+                    " An underestimated bbox causes silent data loss in range queries."
+                ),
                 suggestion=(
-                    "Re-export the file with accurate bbox metadata, "
-                    "or update the GeoParquet metadata to reflect the actual bounds."
+                    "Re-export the file so the bbox metadata fully encloses all geometries."
+                ),
+            )
+        if declared_too_loose:
+            return CheckResult(
+                check=self.name,
+                status="warn",
+                severity="warn",
+                message=(
+                    f"Declared bbox {fmt_declared} is larger than the actual geometry"
+                    f" extent {fmt_actual} — metadata overstates coverage."
+                ),
+                expected=declared,
+                observed=actual,
+                why_it_matters=(
+                    "An overstated bbox means files will be opened unnecessarily during"
+                    " spatial filtering, reducing query performance."
+                ),
+                suggestion=(
+                    "Update the GeoParquet bbox metadata to match the actual geometry extent."
                 ),
             )
         return CheckResult(
             check=self.name,
             status="pass",
             severity="info",
-            message=f"Declared bbox {declared} matches actual geometry bounds.",
+            message=f"Declared bbox {fmt_declared} matches actual geometry bounds.",
         )
 
 

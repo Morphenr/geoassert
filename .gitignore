@@ -209,6 +209,20 @@ tempCodeRunnerFile.py
 # PyPI configuration file
 .pypirc
 
+# JetBrains IDEs
+.idea/
+
+# geoassert — local data files (keep .gitkeep, ignore actual datasets)
+data/*.parquet
+data/*.geoparquet
+data/*.geojson
+data/*.fgb
+data/*.gpkg
+data/*.shp
+data/*.shx
+data/*.dbf
+data/*.prj
+
 # Marimo
 marimo/_static/
 marimo/_lsp/

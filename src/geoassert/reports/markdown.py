@@ -1,0 +1,60 @@
+"""Markdown report renderer."""
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from geoassert.result import ValidationResult
+
+_STATUS_ICON = {"pass": "✅", "warn": "⚠️", "fail": "❌", "skip": "⏭️"}
+
+
+def render_validation_result(result: "ValidationResult") -> str:
+    lines: list[str] = []
+    path = result.stats.get("path", "Dataset")
+    lines.append(f"# geoassert validation report")
+    lines.append(f"")
+    lines.append(f"**Dataset:** `{path}`  ")
+    lines.append(f"**Result:** {'PASSED ✅' if result.passed else 'FAILED ❌'}  ")
+    if result.stats.get("rows") is not None:
+        lines.append(f"**Rows:** {result.stats['rows']:,}  ")
+    lines.append("")
+
+    lines.append("## Checks")
+    lines.append("")
+    lines.append("| Status | Check | Message |")
+    lines.append("|--------|-------|---------|")
+    for c in result.checks:
+        icon = _STATUS_ICON.get(c.status, c.status)
+        lines.append(f"| {icon} | `{c.check}` | {c.message} |")
+    lines.append("")
+
+    if result.failures:
+        lines.append("## Failures")
+        lines.append("")
+        for f in result.failures:
+            lines.append(f"### `{f.check}`")
+            lines.append("")
+            lines.append(f"**Message:** {f.message}  ")
+            if f.expected is not None:
+                lines.append(f"**Expected:** `{f.expected}`  ")
+            if f.observed is not None:
+                lines.append(f"**Observed:** `{f.observed}`  ")
+            if f.affected_rows is not None:
+                lines.append(f"**Affected rows:** {f.affected_rows:,}  ")
+            if f.why_it_matters:
+                lines.append(f"**Why it matters:** {f.why_it_matters}  ")
+            if f.suggestion:
+                lines.append(f"**Suggestion:** {f.suggestion}  ")
+            lines.append("")
+
+    if result.warnings:
+        lines.append("## Warnings")
+        lines.append("")
+        for w in result.warnings:
+            lines.append(f"- ⚠️ **`{w.check}`** — {w.message}")
+            if w.suggestion:
+                lines.append(f"  _{w.suggestion}_")
+        lines.append("")
+
+    return "\n".join(lines)

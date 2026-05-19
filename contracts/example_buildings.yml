@@ -1,0 +1,29 @@
+geoassert_version: "0.1"
+
+dataset: buildings
+
+source:
+  path: data/buildings.parquet
+  format: geoparquet
+
+geometry:
+  column: geometry
+  type:
+    - Polygon
+    - MultiPolygon
+  crs: EPSG:4326
+  valid: true
+  allow_empty: false
+
+bounds:
+  within:
+    bbox: [-8.65, 49.86, 1.76, 60.86]   # Great Britain
+
+attributes:
+  building_id:
+    nullable: false
+    unique: true
+  height_m:
+    nullable: true
+    min: 0
+    max: 400

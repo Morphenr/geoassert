@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 import typer
 from rich.console import Console
@@ -36,10 +35,10 @@ def profile(
         result = profile_dataset(path)
     except DataReadError as exc:
         err.print(f"[red]Error:[/red] {exc}")
-        raise typer.Exit(3)
+        raise typer.Exit(3) from None
     except GeoAssertError as exc:
         err.print(f"[red]Error:[/red] {exc}")
-        raise typer.Exit(4)
+        raise typer.Exit(4) from None
 
     if format == "json":
         import json
@@ -51,7 +50,7 @@ def profile(
 @app.command("init-contract")
 def init_contract(
     path: Path = typer.Argument(..., help="Path to the dataset."),
-    out: Optional[Path] = typer.Option(None, "--out", "-o", help="Write to file (default: stdout)."),
+    out: Path | None = typer.Option(None, "--out", "-o", help="Write to file (default: stdout)."),
 ) -> None:
     """Generate a starter contract YAML from an existing dataset."""
     from geoassert.profiling.profiler import generate_contract_yaml
@@ -60,7 +59,7 @@ def init_contract(
         yaml_str = generate_contract_yaml(path)
     except DataReadError as exc:
         err.print(f"[red]Error:[/red] {exc}")
-        raise typer.Exit(3)
+        raise typer.Exit(3) from None
 
     if out:
         out.write_text(yaml_str)
@@ -84,16 +83,16 @@ def validate(
         loaded = load_contract(contract)
     except ContractError as exc:
         err.print(f"[red]Contract error:[/red] {exc}")
-        raise typer.Exit(2)
+        raise typer.Exit(2) from None
 
     try:
         result = run_validation(path, loaded)
     except DataReadError as exc:
         err.print(f"[red]Data error:[/red] {exc}")
-        raise typer.Exit(3)
+        raise typer.Exit(3) from None
     except GeoAssertError as exc:
         err.print(f"[red]Error:[/red] {exc}")
-        raise typer.Exit(4)
+        raise typer.Exit(4) from None
 
     if format == "json":
         console.print_json(result.to_json())
@@ -124,7 +123,7 @@ def geoparquet_check(
         info = read_geoparquet_info(path)
     except DataReadError as exc:
         err.print(f"[red]Error:[/red] {exc}")
-        raise typer.Exit(3)
+        raise typer.Exit(3) from None
 
     checks = run_metadata_checks(info)
     failed = [c for c in checks if c.status == "fail"]

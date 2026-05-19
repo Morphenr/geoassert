@@ -22,7 +22,7 @@ def check_shapely() -> None:
         )
 
 
-def wkb_column_to_geometries(array: "pa.Array") -> list:
+def wkb_column_to_geometries(array: pa.Array) -> list:
     """Decode a WKB binary column into shapely geometries."""
     check_shapely()
     return [shapely.wkb.loads(bytes(v.as_py())) if v.is_valid else None for v in array]

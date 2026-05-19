@@ -9,11 +9,11 @@ if TYPE_CHECKING:
 _STATUS_ICON = {"pass": "✅", "warn": "⚠️", "fail": "❌", "skip": "⏭️"}
 
 
-def render_validation_result(result: "ValidationResult") -> str:
+def render_validation_result(result: ValidationResult) -> str:
     lines: list[str] = []
     path = result.stats.get("path", "Dataset")
-    lines.append(f"# geoassert validation report")
-    lines.append(f"")
+    lines.append("# geoassert validation report")
+    lines.append("")
     lines.append(f"**Dataset:** `{path}`  ")
     lines.append(f"**Result:** {'PASSED ✅' if result.passed else 'FAILED ❌'}  ")
     if result.stats.get("rows") is not None:

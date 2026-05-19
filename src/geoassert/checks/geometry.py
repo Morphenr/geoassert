@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 class GeometryColumnExistsCheck(BaseCheck):
     name = "geometry.column_exists"
 
-    def run(self, info: "DatasetInfo", contract: "Contract | None" = None) -> CheckResult:
+    def run(self, info: DatasetInfo, contract: Contract | None = None) -> CheckResult:
         col = contract.geometry.column if contract and contract.geometry else "geometry"
         if col not in info.schema.names:
             return CheckResult(
@@ -33,7 +33,7 @@ class GeometryColumnExistsCheck(BaseCheck):
 class GeometryTypeCheck(BaseCheck):
     name = "geometry.type"
 
-    def run(self, info: "DatasetInfo", contract: "Contract | None" = None) -> CheckResult:
+    def run(self, info: DatasetInfo, contract: Contract | None = None) -> CheckResult:
         if not (contract and contract.geometry and contract.geometry.type):
             return CheckResult(check=self.name, status="skip", severity="info",
                                message="Skipped: no geometry.type constraint in contract.")
@@ -59,7 +59,10 @@ class GeometryTypeCheck(BaseCheck):
                 message="Geometry types outside the allowed set observed.",
                 expected=sorted(allowed),
                 observed=sorted(observed_types),
-                suggestion=f"Update the contract type list or filter/convert geometries: {sorted(disallowed)}",
+                suggestion=(
+                    f"Update the contract type list or filter/convert geometries:"
+                    f" {sorted(disallowed)}"
+                ),
             )
         return CheckResult(
             check=self.name, status="pass", severity="info",
@@ -70,7 +73,7 @@ class GeometryTypeCheck(BaseCheck):
 class GeometryValidCheck(BaseCheck):
     name = "geometry.valid"
 
-    def run(self, info: "DatasetInfo", contract: "Contract | None" = None) -> CheckResult:
+    def run(self, info: DatasetInfo, contract: Contract | None = None) -> CheckResult:
         from geoassert.engines.pyarrow import read_table
         from geoassert.engines.shapely import count_invalid, wkb_column_to_geometries
 
@@ -91,10 +94,14 @@ class GeometryValidCheck(BaseCheck):
                 observed=f"{n_invalid:,} invalid",
                 affected_rows=n_invalid,
                 suggestion=(
-                    "Inspect invalid geometries or repair them explicitly with a make-valid workflow. "
-                    "Run: geoassert repair --method make-valid (future command)."
+                    "Inspect invalid geometries or repair them explicitly"
+                    " with a make-valid workflow."
+                    " Run: geoassert repair --method make-valid (future command)."
                 ),
-                why_it_matters="Invalid geometries cause silent errors in spatial joins, area calculations, and map rendering.",
+                why_it_matters=(
+                    "Invalid geometries cause silent errors in spatial joins,"
+                    " area calculations, and map rendering."
+                ),
             )
         return CheckResult(
             check=self.name, status="pass", severity="info",
@@ -105,7 +112,7 @@ class GeometryValidCheck(BaseCheck):
 class GeometryEmptyCheck(BaseCheck):
     name = "geometry.empty"
 
-    def run(self, info: "DatasetInfo", contract: "Contract | None" = None) -> CheckResult:
+    def run(self, info: DatasetInfo, contract: Contract | None = None) -> CheckResult:
         allow_empty = contract.geometry.allow_empty if contract and contract.geometry else False
         col = contract.geometry.column if contract and contract.geometry else "geometry"
         if col not in info.schema.names:
@@ -126,12 +133,18 @@ class GeometryEmptyCheck(BaseCheck):
                 expected="no empty geometries",
                 observed=f"{n_empty:,} empty",
                 affected_rows=n_empty,
-                suggestion="Filter out empty geometries before export or set allow_empty: true in the contract.",
+                suggestion=(
+                    "Filter out empty geometries before export"
+                    " or set allow_empty: true in the contract."
+                ),
             )
         if n_empty > 0:
             return CheckResult(
                 check=self.name, status="warn", severity="warn",
-                message=f"{n_empty:,} empty geometr{'y' if n_empty == 1 else 'ies'} found (allow_empty=true).",
+                message=(
+                    f"{n_empty:,} empty geometr{'y' if n_empty == 1 else 'ies'}"
+                    " found (allow_empty=true)."
+                ),
                 affected_rows=n_empty,
             )
         return CheckResult(
@@ -141,8 +154,8 @@ class GeometryEmptyCheck(BaseCheck):
 
 
 def run_geometry_checks(
-    info: "DatasetInfo",
-    contract: "Contract | None" = None,
+    info: DatasetInfo,
+    contract: Contract | None = None,
 ) -> list[CheckResult]:
     checks: list[BaseCheck] = [
         GeometryColumnExistsCheck(),

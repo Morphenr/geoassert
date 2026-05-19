@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from geoassert.engines.pyarrow import DatasetInfo
 
 
-def _bbox_from_meta(info: "DatasetInfo") -> list[float] | None:
+def _bbox_from_meta(info: DatasetInfo) -> list[float] | None:
     """Return [minx, miny, maxx, maxy] from GeoParquet metadata, if present."""
     if not info.geo_metadata:
         return None
@@ -25,7 +25,7 @@ def _bbox_from_meta(info: "DatasetInfo") -> list[float] | None:
 class BoundsAvailableCheck(BaseCheck):
     name = "bounds.available"
 
-    def run(self, info: "DatasetInfo", contract: "Contract | None" = None) -> CheckResult:
+    def run(self, info: DatasetInfo, contract: Contract | None = None) -> CheckResult:
         bbox = _bbox_from_meta(info)
         if bbox is None:
             return CheckResult(
@@ -42,22 +42,27 @@ class BoundsAvailableCheck(BaseCheck):
 class BoundsWithinCheck(BaseCheck):
     name = "bounds.within"
 
-    def run(self, info: "DatasetInfo", contract: "Contract | None" = None) -> CheckResult:
+    def run(self, info: DatasetInfo, contract: Contract | None = None) -> CheckResult:
         if not (contract and contract.bounds and contract.bounds.within):
             return CheckResult(check=self.name, status="skip", severity="info",
                                message="Skipped: no bounds.within constraint in contract.")
 
         expected_bbox = contract.bounds.within.bbox
         if expected_bbox is None:
-            return CheckResult(check=self.name, status="skip", severity="info",
-                               message="Skipped: bounds.within.bbox not set (country preset not yet supported).")
+            return CheckResult(
+                check=self.name, status="skip", severity="info",
+                message="Skipped: bounds.within.bbox not set (country preset not yet supported).",
+            )
 
         observed_bbox = _bbox_from_meta(info)
         if observed_bbox is None:
             return CheckResult(
                 check=self.name, status="warn", severity="warn",
                 message="Cannot verify bounds: no bbox metadata in dataset.",
-                suggestion="Include bbox in GeoParquet metadata, or use a full geometry scan (not yet supported).",
+                suggestion=(
+                    "Include bbox in GeoParquet metadata, or use a full geometry scan"
+                    " (not yet supported)."
+                ),
             )
 
         e_minx, e_miny, e_maxx, e_maxy = expected_bbox
@@ -69,7 +74,10 @@ class BoundsWithinCheck(BaseCheck):
                 message="Dataset bounds exceed the expected bbox.",
                 expected=expected_bbox,
                 observed=observed_bbox,
-                why_it_matters="Data outside expected bounds may indicate coordinate errors or unexpected coverage.",
+                why_it_matters=(
+                    "Data outside expected bounds may indicate coordinate errors"
+                    " or unexpected coverage."
+                ),
                 suggestion="Verify the data source or update the contract bounds.",
             )
         return CheckResult(
@@ -79,7 +87,7 @@ class BoundsWithinCheck(BaseCheck):
 
 
 def run_bounds_checks(
-    info: "DatasetInfo",
-    contract: "Contract | None" = None,
+    info: DatasetInfo,
+    contract: Contract | None = None,
 ) -> list[CheckResult]:
     return [c.run(info, contract) for c in [BoundsAvailableCheck(), BoundsWithinCheck()]]

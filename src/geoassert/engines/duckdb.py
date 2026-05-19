@@ -1,7 +1,10 @@
 """DuckDB spatial engine (requires geoassert[duckdb])."""
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 try:
     import duckdb
@@ -18,14 +21,14 @@ def check_duckdb() -> None:
         )
 
 
-def get_connection() -> "duckdb.DuckDBPyConnection":
+def get_connection() -> duckdb.DuckDBPyConnection:
     check_duckdb()
     conn = duckdb.connect()
     conn.execute("INSTALL spatial; LOAD spatial;")
     return conn
 
 
-def query_parquet(path: Path | str, sql: str) -> "duckdb.DuckDBPyRelation":
+def query_parquet(path: Path | str, sql: str) -> duckdb.DuckDBPyRelation:
     """Run a SQL query against a Parquet file using DuckDB."""
     conn = get_connection()
     conn.execute(f"CREATE VIEW dataset AS SELECT * FROM read_parquet('{path}')")

@@ -3,16 +3,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 from geoassert.checks.geoparquet import (
     ColumnInSchemaCheck,
     GeoMetadataCheck,
-    PrimaryColumnCheck,
     run_metadata_checks,
 )
 from geoassert.engines.pyarrow import read_geoparquet_info
-
 from tests.conftest import write_test_geoparquet
 
 
@@ -39,6 +35,7 @@ def test_missing_geo_metadata_fails(tmp_path: Path) -> None:
 def test_column_not_in_schema_fails(tmp_path: Path) -> None:
     """Geo metadata declares a column that doesn't exist in the Parquet schema."""
     import json
+
     import pyarrow as pa
     import pyarrow.parquet as pq
 

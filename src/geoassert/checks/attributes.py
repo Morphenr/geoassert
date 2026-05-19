@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import pyarrow as pa
 import pyarrow.compute as pc
 
 from geoassert.checks.base import BaseCheck
@@ -21,7 +20,7 @@ class AttributeExistsCheck(BaseCheck):
     def __init__(self, column: str) -> None:
         self.column = column
 
-    def run(self, info: "DatasetInfo", contract: "Contract | None" = None) -> CheckResult:
+    def run(self, info: DatasetInfo, contract: Contract | None = None) -> CheckResult:
         check_name = f"attributes.{self.column}.exists"
         if self.column not in info.schema.names:
             return CheckResult(
@@ -41,7 +40,7 @@ class AttributeNullCheck(BaseCheck):
         self.column = column
         self.nullable = nullable
 
-    def run(self, info: "DatasetInfo", contract: "Contract | None" = None) -> CheckResult:
+    def run(self, info: DatasetInfo, contract: Contract | None = None) -> CheckResult:
         check_name = f"attributes.{self.column}.nullable"
         if self.column not in info.schema.names:
             return CheckResult(check=check_name, status="skip", severity="info",
@@ -72,7 +71,7 @@ class AttributeUniqueCheck(BaseCheck):
     def __init__(self, column: str) -> None:
         self.column = column
 
-    def run(self, info: "DatasetInfo", contract: "Contract | None" = None) -> CheckResult:
+    def run(self, info: DatasetInfo, contract: Contract | None = None) -> CheckResult:
         check_name = f"attributes.{self.column}.unique"
         if self.column not in info.schema.names:
             return CheckResult(check=check_name, status="skip", severity="info",
@@ -104,7 +103,7 @@ class AttributeRangeCheck(BaseCheck):
         self.min_val = min_val
         self.max_val = max_val
 
-    def run(self, info: "DatasetInfo", contract: "Contract | None" = None) -> CheckResult:
+    def run(self, info: DatasetInfo, contract: Contract | None = None) -> CheckResult:
         check_name = f"attributes.{self.column}.range"
         if self.column not in info.schema.names:
             return CheckResult(check=check_name, status="skip", severity="info",
@@ -135,13 +134,16 @@ class AttributeRangeCheck(BaseCheck):
             )
         return CheckResult(
             check=check_name, status="pass", severity="info",
-            message=f"Column {self.column!r} range [{observed_min}, {observed_max}] is within bounds.",
+            message=(
+                f"Column {self.column!r} range"
+                f" [{observed_min}, {observed_max}] is within bounds."
+            ),
         )
 
 
 def run_attribute_checks(
-    info: "DatasetInfo",
-    contract: "Contract | None" = None,
+    info: DatasetInfo,
+    contract: Contract | None = None,
 ) -> list[CheckResult]:
     if not (contract and contract.attributes):
         return []

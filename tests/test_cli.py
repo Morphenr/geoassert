@@ -3,11 +3,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
 from typer.testing import CliRunner
 
 from geoassert.cli import app
-
 from tests.conftest import write_test_geoparquet
 
 runner = CliRunner()

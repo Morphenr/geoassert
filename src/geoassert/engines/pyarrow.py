@@ -1,6 +1,7 @@
 """PyArrow-based dataset reader — no extras required."""
 from __future__ import annotations
 
+import contextlib
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -36,10 +37,8 @@ def read_geoparquet_info(path: Path | str) -> DatasetInfo:
 
     geo_metadata: dict[str, Any] | None = None
     if b"geo" in raw_meta:
-        try:
+        with contextlib.suppress(json.JSONDecodeError):
             geo_metadata = json.loads(raw_meta[b"geo"])
-        except json.JSONDecodeError:
-            pass
 
     return DatasetInfo(
         path=path,

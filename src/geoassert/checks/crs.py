@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from geoassert.engines.pyarrow import DatasetInfo
 
 
-def _observed_crs(info: "DatasetInfo") -> str | None:
+def _observed_crs(info: DatasetInfo) -> str | None:
     """Extract CRS string from geo metadata for the primary column."""
     if not info.geo_metadata:
         return None
@@ -32,7 +32,7 @@ def _observed_crs(info: "DatasetInfo") -> str | None:
 class CRSExistsCheck(BaseCheck):
     name = "crs.exists"
 
-    def run(self, info: "DatasetInfo", contract: "Contract | None" = None) -> CheckResult:
+    def run(self, info: DatasetInfo, contract: Contract | None = None) -> CheckResult:
         crs = _observed_crs(info)
         if not crs:
             return CheckResult(
@@ -49,7 +49,7 @@ class CRSExistsCheck(BaseCheck):
 class CRSMatchCheck(BaseCheck):
     name = "crs.match"
 
-    def run(self, info: "DatasetInfo", contract: "Contract | None" = None) -> CheckResult:
+    def run(self, info: DatasetInfo, contract: Contract | None = None) -> CheckResult:
         if not (contract and contract.geometry and contract.geometry.crs):
             return CheckResult(check=self.name, status="skip", severity="info",
                                message="Skipped: no geometry.crs constraint in contract.")
@@ -66,7 +66,10 @@ class CRSMatchCheck(BaseCheck):
                 check=self.name, status="fail", severity="error",
                 message="CRS metadata differs from contract.",
                 expected=expected, observed=observed,
-                why_it_matters="Coordinate axis order and downstream spatial operations may behave differently.",
+                why_it_matters=(
+                    "Coordinate axis order and downstream spatial operations"
+                    " may behave differently."
+                ),
                 suggestion=(
                     f"Normalise CRS metadata before export or set allow_equivalent_crs: true "
                     f"in the contract if {observed!r} and {expected!r} are equivalent."
@@ -79,7 +82,7 @@ class CRSMatchCheck(BaseCheck):
 
 
 def run_crs_checks(
-    info: "DatasetInfo",
-    contract: "Contract | None" = None,
+    info: DatasetInfo,
+    contract: Contract | None = None,
 ) -> list[CheckResult]:
     return [c.run(info, contract) for c in [CRSExistsCheck(), CRSMatchCheck()]]

@@ -18,7 +18,7 @@ _KNOWN_ENCODINGS = {"WKB", "WKT", "point", "linestring", "polygon",
 class GeoMetadataCheck(BaseCheck):
     name = "geoparquet.geo_metadata"
 
-    def run(self, info: "DatasetInfo", contract: "Contract | None" = None) -> CheckResult:
+    def run(self, info: DatasetInfo, contract: Contract | None = None) -> CheckResult:
         if info.geo_metadata is None:
             return CheckResult(
                 check=self.name,
@@ -27,8 +27,14 @@ class GeoMetadataCheck(BaseCheck):
                 message="No 'geo' key found in Parquet file metadata.",
                 expected="geo metadata key present",
                 observed="absent",
-                why_it_matters="Without geo metadata, downstream tools cannot discover the geometry column or CRS.",
-                suggestion="Ensure the file was written as GeoParquet (e.g. via geopandas.to_parquet or lonboard).",
+                why_it_matters=(
+                    "Without geo metadata, downstream tools cannot discover"
+                    " the geometry column or CRS."
+                ),
+                suggestion=(
+                    "Ensure the file was written as GeoParquet"
+                    " (e.g. via geopandas.to_parquet or lonboard)."
+                ),
             )
         return CheckResult(
             check=self.name, status="pass", severity="info",
@@ -39,7 +45,7 @@ class GeoMetadataCheck(BaseCheck):
 class PrimaryColumnCheck(BaseCheck):
     name = "geoparquet.primary_column"
 
-    def run(self, info: "DatasetInfo", contract: "Contract | None" = None) -> CheckResult:
+    def run(self, info: DatasetInfo, contract: Contract | None = None) -> CheckResult:
         if info.geo_metadata is None:
             return CheckResult(check=self.name, status="skip", severity="info",
                                message="Skipped: no geo metadata.")
@@ -59,7 +65,7 @@ class PrimaryColumnCheck(BaseCheck):
 class ColumnInSchemaCheck(BaseCheck):
     name = "geoparquet.column_in_schema"
 
-    def run(self, info: "DatasetInfo", contract: "Contract | None" = None) -> CheckResult:
+    def run(self, info: DatasetInfo, contract: Contract | None = None) -> CheckResult:
         if info.geo_metadata is None:
             return CheckResult(check=self.name, status="skip", severity="info",
                                message="Skipped: no geo metadata.")
@@ -71,7 +77,10 @@ class ColumnInSchemaCheck(BaseCheck):
                 check=self.name, status="fail", severity="error",
                 message="Geometry column(s) declared in geo metadata not found in Parquet schema.",
                 observed=missing,
-                suggestion="Ensure geometry column names in geo metadata match the actual Parquet schema.",
+                suggestion=(
+                    "Ensure geometry column names in geo metadata"
+                    " match the actual Parquet schema."
+                ),
             )
         return CheckResult(
             check=self.name, status="pass", severity="info",
@@ -82,7 +91,7 @@ class ColumnInSchemaCheck(BaseCheck):
 class EncodingCheck(BaseCheck):
     name = "geoparquet.encoding"
 
-    def run(self, info: "DatasetInfo", contract: "Contract | None" = None) -> CheckResult:
+    def run(self, info: DatasetInfo, contract: Contract | None = None) -> CheckResult:
         if info.geo_metadata is None:
             return CheckResult(check=self.name, status="skip", severity="info",
                                message="Skipped: no geo metadata.")
@@ -107,7 +116,7 @@ class EncodingCheck(BaseCheck):
 class CRSParseableCheck(BaseCheck):
     name = "geoparquet.crs_parseable"
 
-    def run(self, info: "DatasetInfo", contract: "Contract | None" = None) -> CheckResult:
+    def run(self, info: DatasetInfo, contract: Contract | None = None) -> CheckResult:
         if info.geo_metadata is None:
             return CheckResult(check=self.name, status="skip", severity="info",
                                message="Skipped: no geo metadata.")
@@ -131,7 +140,7 @@ class CRSParseableCheck(BaseCheck):
 class GeometryTypeMetaCheck(BaseCheck):
     name = "geoparquet.geometry_types"
 
-    def run(self, info: "DatasetInfo", contract: "Contract | None" = None) -> CheckResult:
+    def run(self, info: DatasetInfo, contract: Contract | None = None) -> CheckResult:
         if info.geo_metadata is None:
             return CheckResult(check=self.name, status="skip", severity="info",
                                message="Skipped: no geo metadata.")
@@ -156,8 +165,8 @@ class GeometryTypeMetaCheck(BaseCheck):
 
 
 def run_metadata_checks(
-    info: "DatasetInfo",
-    contract: "Contract | None" = None,
+    info: DatasetInfo,
+    contract: Contract | None = None,
 ) -> list[CheckResult]:
     """Run all GeoParquet metadata checks and return results."""
     checks: list[BaseCheck] = [

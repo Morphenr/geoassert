@@ -16,7 +16,7 @@ def load_contract(path: Path | str) -> Contract:
     try:
         raw = yaml.safe_load(path.read_text())
     except FileNotFoundError:
-        raise ContractError(f"Contract file not found: {path}")
+        raise ContractError(f"Contract file not found: {path}") from None
     except yaml.YAMLError as exc:
         raise ContractError(f"Invalid YAML in contract {path}: {exc}") from exc
 

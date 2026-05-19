@@ -1,8 +1,7 @@
 """geoassert — data contracts for geospatial pipelines."""
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Union
+from typing import TYPE_CHECKING
 
 from geoassert.contracts.loader import load_contract
 from geoassert.contracts.schema import Contract
@@ -17,12 +16,15 @@ __all__ = [
     "CheckResult",
 ]
 
+if TYPE_CHECKING:
+    from pathlib import Path
+
 __version__ = "0.1.0"
 
 
 def validate(
-    path: Union[str, Path],
-    contract: Union[str, Path, Contract],
+    path: str | Path,
+    contract: str | Path | Contract,
 ) -> ValidationResult:
     """Validate a geospatial dataset against a contract.
 
@@ -40,7 +42,7 @@ def validate(
     return run_validation(path, contract)
 
 
-def profile(path: Union[str, Path]) -> dict:
+def profile(path: str | Path) -> dict:
     """Profile a geospatial dataset and return key facts."""
     from geoassert.profiling.profiler import profile_dataset
 

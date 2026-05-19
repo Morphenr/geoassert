@@ -2,10 +2,13 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from geoassert.contracts.schema import Contract
 from geoassert.engines.pyarrow import DatasetInfo, read_geoparquet_info
 from geoassert.result import CheckResult, ValidationResult
+
+if TYPE_CHECKING:
+    from geoassert.contracts.schema import Contract
 
 
 def run_validation(path: Path | str, contract: Contract) -> ValidationResult:

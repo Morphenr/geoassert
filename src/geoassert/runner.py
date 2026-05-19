@@ -12,9 +12,14 @@ if TYPE_CHECKING:
     from geoassert.contracts.schema import Contract
 
 
-def run_validation(path: Path | str, contract: Contract) -> ValidationResult:
+def run_validation(
+    path: Path | str,
+    contract: Contract,
+    sample: int | None = None,
+) -> ValidationResult:
     path = Path(path)
     info = read_geoparquet_info(path)
+    info.sample = sample
     all_checks: list[CheckResult] = []
 
     # GeoParquet metadata — always run for Parquet inputs
@@ -42,19 +47,29 @@ def run_validation(path: Path | str, contract: Contract) -> ValidationResult:
 
         all_checks.extend(run_attribute_checks(info, contract))
 
+    # Apply per-check severity overrides from contract
+    if contract.severity:
+        for check in all_checks:
+            if check.check in contract.severity:
+                check.severity = contract.severity[check.check]
+
     failures = [c for c in all_checks if c.status == "fail"]
     warnings = [c for c in all_checks if c.status == "warn"]
+
+    stats: dict = {
+        "path": str(path),
+        "rows": info.num_rows,
+        "columns": len(info.schema.names),
+    }
+    if sample is not None:
+        stats["sample"] = sample
 
     return ValidationResult(
         passed=len(failures) == 0,
         failures=failures,
         warnings=warnings,
         checks=all_checks,
-        stats={
-            "path": str(path),
-            "rows": info.num_rows,
-            "columns": len(info.schema.names),
-        },
+        stats=stats,
     )
 
 

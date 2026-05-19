@@ -1,0 +1,20 @@
+- id: geoassert-validate
+  name: Validate geospatial datasets
+  description: >
+    Run geoassert validate against a geospatial dataset.
+    Specify --args ['--contract', 'path/to/contract.yml'] in your
+    .pre-commit-config.yaml.
+  entry: geoassert validate
+  language: python
+  pass_filenames: true
+  types_or: [file]
+  stages: [pre-commit, manual]
+
+- id: geoassert-geoparquet-check
+  name: Check GeoParquet metadata
+  description: Run geoassert geoparquet check against GeoParquet files.
+  entry: geoassert geoparquet check
+  language: python
+  pass_filenames: true
+  types_or: [file]
+  stages: [pre-commit, manual]

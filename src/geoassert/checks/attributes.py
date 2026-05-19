@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 import pyarrow.compute as pc
 
 from geoassert.checks.base import BaseCheck
-from geoassert.engines.pyarrow import read_table
+from geoassert.engines.pyarrow import read_table_for_check
 from geoassert.result import CheckResult
 
 if TYPE_CHECKING:
@@ -64,7 +64,7 @@ class AttributeNullCheck(BaseCheck):
                 message=f"Column {self.column!r} is allowed to be nullable.",
             )
 
-        table = read_table(info.path, columns=[self.column])
+        table = read_table_for_check(info, columns=[self.column])
         arr = table.column(self.column)
         n_nulls = arr.null_count
         if n_nulls > 0:
@@ -102,7 +102,7 @@ class AttributeUniqueCheck(BaseCheck):
                 message=f"Skipped: column {self.column!r} not in schema.",
             )
 
-        table = read_table(info.path, columns=[self.column])
+        table = read_table_for_check(info, columns=[self.column])
         arr = table.column(self.column)
         n_total = len(arr)
         n_distinct = pc.count_distinct(arr).as_py()
@@ -144,7 +144,7 @@ class AttributeRangeCheck(BaseCheck):
                 message=f"Skipped: column {self.column!r} not in schema.",
             )
 
-        table = read_table(info.path, columns=[self.column])
+        table = read_table_for_check(info, columns=[self.column])
         arr = table.column(self.column).drop_null()
         if len(arr) == 0:
             return CheckResult(

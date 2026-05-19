@@ -21,7 +21,7 @@ app.add_typer(geoparquet_app, name="geoparquet")
 console = Console()
 err = Console(stderr=True)
 
-_FORMAT_HELP = "Output format: text | json | markdown | github"
+_FORMAT_HELP = "Output format: text | json | markdown | github | junit"
 
 
 @app.command()
@@ -76,6 +76,18 @@ def validate(
     contract: Path = typer.Option(..., "--contract", "-c", help="Path to the contract YAML."),
     format: str = typer.Option("text", "--format", "-f", help=_FORMAT_HELP),
     fail_on_warn: bool = typer.Option(False, "--fail-on-warn", help="Exit 1 on warnings."),
+    sample: int | None = typer.Option(
+        None,
+        "--sample",
+        "-n",
+        help="Row sample size for row-level checks (skips sampling when omitted).",
+        min=1,
+    ),
+    junit_out: Path | None = typer.Option(
+        None,
+        "--junit-out",
+        help="Write JUnit XML to this file (in addition to the chosen --format output).",
+    ),
 ) -> None:
     """Validate a dataset against a contract."""
     from geoassert.contracts.loader import load_contract
@@ -88,7 +100,7 @@ def validate(
         raise typer.Exit(2) from None
 
     try:
-        result = run_validation(path, loaded)
+        result = run_validation(path, loaded, sample=sample)
     except DataReadError as exc:
         err.print(f"[red]Data error:[/red] {exc}")
         raise typer.Exit(3) from None
@@ -104,8 +116,17 @@ def validate(
         from geoassert.reports.github import render_github_annotations
 
         render_github_annotations(result, console)
+    elif format == "junit":
+        from geoassert.reports.junit import render_junit
+
+        console.print(render_junit(result), highlight=False)
     else:
         _print_validation_result(result)
+
+    if junit_out is not None:
+        from geoassert.reports.junit import render_junit
+
+        junit_out.write_text(render_junit(result), encoding="utf-8")
 
     if not result.passed:
         raise typer.Exit(1)
@@ -183,6 +204,11 @@ def _print_validation_result(result: object) -> None:
     assert isinstance(result, ValidationResult)
 
     _print_check_list(result.checks, Path(str(result.stats.get("path", "dataset"))))
+
+    if result.stats.get("sample"):
+        console.print(
+            f"\n[dim]Row-level checks run on a sample of {result.stats['sample']:,} rows.[/dim]"
+        )
 
     if result.failures:
         console.print()

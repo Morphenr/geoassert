@@ -100,19 +100,20 @@ def test_crs_match_skips_when_no_geometry_contract(tmp_path: Path) -> None:
 # ── run_crs_checks (integration) ──────────────────────────────────────────────
 
 
-def test_run_crs_checks_returns_two_results(tmp_path: Path) -> None:
+def test_run_crs_checks_returns_three_results(tmp_path: Path) -> None:
     info = read_geoparquet_info(write_test_geoparquet(tmp_path / "ok.parquet"))
     results = run_crs_checks(info)
-    assert len(results) == 2
+    assert len(results) == 3
 
 
-def test_run_crs_checks_all_pass_for_matching_contract(tmp_path: Path) -> None:
+def test_run_crs_checks_all_pass_or_warn_for_matching_contract(tmp_path: Path) -> None:
     info = read_geoparquet_info(
         write_test_geoparquet(tmp_path / "ok.parquet", crs_authority="EPSG", crs_code=4326)
     )
     contract = make_contract(geometry={"crs": "EPSG:4326"})
     results = run_crs_checks(info, contract)
-    assert all(r.status == "pass" for r in results)
+    # CRSAxisOrderCheck warns for EPSG:4326 (lat-first), so expect pass or warn only
+    assert all(r.status in ("pass", "warn") for r in results)
 
 
 def test_run_crs_checks_fail_for_wrong_crs(tmp_path: Path) -> None:

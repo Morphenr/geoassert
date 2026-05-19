@@ -38,6 +38,8 @@ class GeometryContract(BaseModel):
     allow_empty: bool = False
     allow_null: bool = False
     allow_equivalent_crs: bool = False
+    # Dimension constraint: "2D" (no Z/M), "3D" (Z required), "any" (no check)
+    dimensions: Literal["2D", "3D", "any"] = "any"
 
     @field_validator("crs")
     @classmethod

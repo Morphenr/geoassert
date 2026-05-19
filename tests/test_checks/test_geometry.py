@@ -220,10 +220,10 @@ def test_geometry_type_skips_when_no_contract(tmp_path: Path) -> None:
 # ── run_geometry_checks (integration) ─────────────────────────────────────────
 
 
-def test_run_geometry_checks_returns_four_results(tmp_path: Path) -> None:
+def test_run_geometry_checks_returns_six_results(tmp_path: Path) -> None:
     info = read_geoparquet_info(write_test_geoparquet(tmp_path / "ok.parquet"))
     results = run_geometry_checks(info)
-    assert len(results) == 4
+    assert len(results) == 6
 
 
 def test_run_geometry_checks_all_pass_for_valid_file(tmp_path: Path) -> None:

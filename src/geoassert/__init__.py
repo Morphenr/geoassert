@@ -22,7 +22,7 @@ __all__ = [
     "CheckResult",
 ]
 
-__version__ = "0.4.0"
+__version__ = "0.6.0"
 
 
 def validate(

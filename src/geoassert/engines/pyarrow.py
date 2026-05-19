@@ -6,10 +6,13 @@ import contextlib
 import json
 import random
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 import pyarrow as pa
+import pyarrow.fs as pa_fs
 import pyarrow.parquet as pq
 
 from geoassert.exceptions import DataReadError
@@ -17,20 +20,35 @@ from geoassert.exceptions import DataReadError
 
 @dataclass
 class DatasetInfo:
-    path: Path
+    path: Path | str
     schema: pa.Schema
     num_rows: int
     metadata: dict[bytes, bytes] = field(default_factory=dict)
     geo_metadata: dict[str, Any] | None = None
     parquet_metadata: Any | None = None  # pq.FileMetaData
     sample: int | None = None  # row limit for row-level checks
+    engine: str = "pyarrow"  # "pyarrow" | "duckdb"
+
+
+def _resolve_filesystem(
+    path: Path | str,
+) -> tuple[str, pa_fs.FileSystem | None]:
+    """Return (path_string, filesystem_or_None) for local or cloud URIs."""
+    path_str = str(path)
+    if "://" in path_str:
+        filesystem, path_on_fs = pa_fs.FileSystem.from_uri(path_str)
+        return path_on_fs, filesystem
+    return path_str, None
 
 
 def read_geoparquet_info(path: Path | str) -> DatasetInfo:
     """Read Parquet file metadata without loading all row data."""
-    path = Path(path)
+    path_on_fs, filesystem = _resolve_filesystem(path)
     try:
-        parquet_file = pq.ParquetFile(path)
+        if filesystem is not None:
+            parquet_file = pq.ParquetFile(path_on_fs, filesystem=filesystem)
+        else:
+            parquet_file = pq.ParquetFile(path_on_fs)
     except Exception as exc:
         raise DataReadError(f"Cannot open {path}: {exc}") from exc
 
@@ -55,9 +73,11 @@ def read_geoparquet_info(path: Path | str) -> DatasetInfo:
 
 def read_table(path: Path | str, columns: list[str] | None = None) -> pa.Table:
     """Read the full table (or a column subset) into memory."""
-    path = Path(path)
+    path_on_fs, filesystem = _resolve_filesystem(path)
     try:
-        return pq.read_table(path, columns=columns)
+        if filesystem is not None:
+            return pq.read_table(path_on_fs, columns=columns, filesystem=filesystem)
+        return pq.read_table(path_on_fs, columns=columns)
     except Exception as exc:
         raise DataReadError(f"Cannot read {path}: {exc}") from exc
 

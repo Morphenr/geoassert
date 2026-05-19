@@ -64,9 +64,14 @@ class AttributeNullCheck(BaseCheck):
                 message=f"Column {self.column!r} is allowed to be nullable.",
             )
 
-        table = read_table_for_check(info, columns=[self.column])
-        arr = table.column(self.column)
-        n_nulls = arr.null_count
+        if info.engine == "duckdb":
+            from geoassert.engines.duckdb import count_nulls
+
+            n_nulls = count_nulls(str(info.path), self.column)
+        else:
+            table = read_table_for_check(info, columns=[self.column])
+            n_nulls = table.column(self.column).null_count
+
         if n_nulls > 0:
             return CheckResult(
                 check=check_name,
@@ -102,11 +107,19 @@ class AttributeUniqueCheck(BaseCheck):
                 message=f"Skipped: column {self.column!r} not in schema.",
             )
 
-        table = read_table_for_check(info, columns=[self.column])
-        arr = table.column(self.column)
-        n_total = len(arr)
-        n_distinct = pc.count_distinct(arr).as_py()
-        n_dupes = n_total - n_distinct
+        if info.engine == "duckdb":
+            from geoassert.engines.duckdb import count_distinct, count_total
+
+            n_total = count_total(str(info.path))
+            n_distinct = count_distinct(str(info.path), self.column)
+            n_dupes = n_total - n_distinct
+        else:
+            table = read_table_for_check(info, columns=[self.column])
+            arr = table.column(self.column)
+            n_total = len(arr)
+            n_distinct = pc.count_distinct(arr).as_py()
+            n_dupes = n_total - n_distinct
+
         if n_dupes > 0:
             return CheckResult(
                 check=check_name,
@@ -144,20 +157,31 @@ class AttributeRangeCheck(BaseCheck):
                 message=f"Skipped: column {self.column!r} not in schema.",
             )
 
-        table = read_table_for_check(info, columns=[self.column])
-        arr = table.column(self.column).drop_null()
-        if len(arr) == 0:
-            return CheckResult(
-                check=check_name,
-                status="skip",
-                severity="info",
-                message=f"Skipped: column {self.column!r} has no non-null values.",
-            )
+        if info.engine == "duckdb":
+            from geoassert.engines.duckdb import count_non_null, get_min_max
 
-        observed_min = pc.min(arr).as_py()
-        observed_max = pc.max(arr).as_py()
+            if count_non_null(str(info.path), self.column) == 0:
+                return CheckResult(
+                    check=check_name,
+                    status="skip",
+                    severity="info",
+                    message=f"Skipped: column {self.column!r} has no non-null values.",
+                )
+            observed_min, observed_max = get_min_max(str(info.path), self.column)
+        else:
+            table = read_table_for_check(info, columns=[self.column])
+            arr = table.column(self.column).drop_null()
+            if len(arr) == 0:
+                return CheckResult(
+                    check=check_name,
+                    status="skip",
+                    severity="info",
+                    message=f"Skipped: column {self.column!r} has no non-null values.",
+                )
+            observed_min = pc.min(arr).as_py()
+            observed_max = pc.max(arr).as_py()
+
         violations = []
-
         if self.min_val is not None and observed_min < self.min_val:
             violations.append(f"min {observed_min} < expected {self.min_val}")
         if self.max_val is not None and observed_max > self.max_val:

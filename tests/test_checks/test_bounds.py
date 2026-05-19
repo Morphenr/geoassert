@@ -85,10 +85,13 @@ def test_bounds_within_skips_when_no_bounds_section(tmp_path: Path) -> None:
 # ── run_bounds_checks (integration) ───────────────────────────────────────────
 
 
-def test_run_bounds_checks_returns_two_results(tmp_path: Path) -> None:
+def test_run_bounds_checks_returns_expected_results(tmp_path: Path) -> None:
     info = read_geoparquet_info(write_test_geoparquet(tmp_path / "ok.parquet"))
     results = run_bounds_checks(info)
-    assert len(results) == 2
+    check_names = [r.check for r in results]
+    assert "bounds.available" in check_names
+    assert "bounds.within" in check_names
+    assert "bounds.bbox_consistency" in check_names
 
 
 def test_run_bounds_checks_all_pass_when_within_contract(tmp_path: Path) -> None:

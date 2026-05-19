@@ -72,7 +72,7 @@ def init_contract(
 
 @app.command()
 def validate(
-    path: Path = typer.Argument(..., help="Path to the dataset."),
+    path: Path = typer.Argument(..., help="Path to the dataset or directory."),
     contract: Path = typer.Option(..., "--contract", "-c", help="Path to the contract YAML."),
     format: str = typer.Option("text", "--format", "-f", help=_FORMAT_HELP),
     fail_on_warn: bool = typer.Option(False, "--fail-on-warn", help="Exit 1 on warnings."),
@@ -83,15 +83,20 @@ def validate(
         help="Row sample size for row-level checks (skips sampling when omitted).",
         min=1,
     ),
+    engine: str = typer.Option(
+        "pyarrow",
+        "--engine",
+        "-e",
+        help="Compute engine for attribute checks: pyarrow | duckdb",
+    ),
     junit_out: Path | None = typer.Option(
         None,
         "--junit-out",
         help="Write JUnit XML to this file (in addition to the chosen --format output).",
     ),
 ) -> None:
-    """Validate a dataset against a contract."""
+    """Validate a dataset or directory of datasets against a contract."""
     from geoassert.contracts.loader import load_contract
-    from geoassert.runner import run_validation
 
     try:
         loaded = load_contract(contract)
@@ -99,8 +104,14 @@ def validate(
         err.print(f"[red]Contract error:[/red] {exc}")
         raise typer.Exit(2) from None
 
+    if path.is_dir():
+        _validate_directory(path, loaded, format, fail_on_warn, sample, engine, junit_out)
+        return
+
+    from geoassert.runner import run_validation
+
     try:
-        result = run_validation(path, loaded, sample=sample)
+        result = run_validation(path, loaded, sample=sample, engine=engine)
     except DataReadError as exc:
         err.print(f"[red]Data error:[/red] {exc}")
         raise typer.Exit(3) from None
@@ -108,20 +119,7 @@ def validate(
         err.print(f"[red]Error:[/red] {exc}")
         raise typer.Exit(4) from None
 
-    if format == "json":
-        console.print_json(result.to_json())
-    elif format in ("markdown", "md"):
-        console.print(result.to_markdown(), highlight=False)
-    elif format == "github":
-        from geoassert.reports.github import render_github_annotations
-
-        render_github_annotations(result, console)
-    elif format == "junit":
-        from geoassert.reports.junit import render_junit
-
-        console.print(render_junit(result), highlight=False)
-    else:
-        _print_validation_result(result)
+    _emit_result(result, format, console)
 
     if junit_out is not None:
         from geoassert.reports.junit import render_junit
@@ -132,6 +130,71 @@ def validate(
         raise typer.Exit(1)
     if fail_on_warn and result.warnings:
         raise typer.Exit(1)
+
+
+def _validate_directory(
+    path: Path,
+    loaded: object,
+    format: str,
+    fail_on_warn: bool,
+    sample: int | None,
+    engine: str,
+    junit_out: Path | None,
+) -> None:
+    from geoassert.runner import validate_directory
+
+    try:
+        results = validate_directory(path, loaded, sample=sample, engine=engine)  # type: ignore[arg-type]
+    except DataReadError as exc:
+        err.print(f"[red]Data error:[/red] {exc}")
+        raise typer.Exit(3) from None
+    except GeoAssertError as exc:
+        err.print(f"[red]Error:[/red] {exc}")
+        raise typer.Exit(4) from None
+
+    if not results:
+        err.print(f"[yellow]No Parquet files found under {path}[/yellow]")
+        raise typer.Exit(0)
+
+    any_failed = False
+    any_warned = False
+    for result in results:
+        _emit_result(result, format, console)
+        if not result.passed:
+            any_failed = True
+        if result.warnings:
+            any_warned = True
+
+    if junit_out is not None:
+        from geoassert.reports.junit import render_junit
+
+        # Write only the last file result; directory result is first
+        junit_out.write_text(render_junit(results[-1]), encoding="utf-8")
+
+    if any_failed:
+        raise typer.Exit(1)
+    if fail_on_warn and any_warned:
+        raise typer.Exit(1)
+
+
+def _emit_result(result: object, format: str, out: Console) -> None:
+    from geoassert.result import ValidationResult
+
+    assert isinstance(result, ValidationResult)
+    if format == "json":
+        out.print_json(result.to_json())
+    elif format in ("markdown", "md"):
+        out.print(result.to_markdown(), highlight=False)
+    elif format == "github":
+        from geoassert.reports.github import render_github_annotations
+
+        render_github_annotations(result, out)
+    elif format == "junit":
+        from geoassert.reports.junit import render_junit
+
+        out.print(render_junit(result), highlight=False)
+    else:
+        _print_validation_result(result)
 
 
 @geoparquet_app.command("check")

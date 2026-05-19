@@ -103,8 +103,100 @@ class BoundsWithinCheck(BaseCheck):
         )
 
 
+class BboxConsistencyCheck(BaseCheck):
+    """Compare declared GeoParquet bbox metadata to the actual bbox computed from geometries."""
+
+    name = "bounds.bbox_consistency"
+
+    def run(self, info: DatasetInfo, contract: Contract | None = None) -> CheckResult:
+        declared = _bbox_from_meta(info)
+        if declared is None:
+            return CheckResult(
+                check=self.name,
+                status="skip",
+                severity="info",
+                message="Skipped: no declared bbox in GeoParquet metadata.",
+            )
+
+        # Determine geometry column
+        primary = info.geo_metadata.get("primary_column") if info.geo_metadata else None  # type: ignore[union-attr]
+        col = primary or "geometry"
+        if col not in info.schema.names:
+            return CheckResult(
+                check=self.name,
+                status="skip",
+                severity="info",
+                message=f"Skipped: geometry column {col!r} not in schema.",
+            )
+
+        try:
+            from geoassert.engines.pyarrow import read_table_for_check
+            from geoassert.engines.shapely import wkb_column_to_geometries
+        except ImportError:
+            return CheckResult(
+                check=self.name,
+                status="skip",
+                severity="info",
+                message="Skipped: install geoassert[shapely] to enable bbox consistency checks.",
+            )
+
+        import shapely
+
+        table = read_table_for_check(info, columns=[col])
+        geoms = wkb_column_to_geometries(table.column(col))
+        valid_geoms = [g for g in geoms if g is not None and not g.is_empty]
+        if not valid_geoms:
+            return CheckResult(
+                check=self.name,
+                status="skip",
+                severity="info",
+                message="Skipped: no valid geometries found to compute actual bbox.",
+            )
+
+        bounds = shapely.bounds(shapely.geometrycollections(valid_geoms))
+        actual_minx, actual_miny, actual_maxx, actual_maxy = (
+            float(bounds[0]),
+            float(bounds[1]),
+            float(bounds[2]),
+            float(bounds[3]),
+        )
+        actual = [actual_minx, actual_miny, actual_maxx, actual_maxy]
+
+        d_minx, d_miny, d_maxx, d_maxy = declared
+        # Tolerance: allow 1e-6 degree (~0.1 m) of floating-point drift
+        tol = 1e-6
+        mismatch = (
+            abs(actual_minx - d_minx) > tol
+            or abs(actual_miny - d_miny) > tol
+            or abs(actual_maxx - d_maxx) > tol
+            or abs(actual_maxy - d_maxy) > tol
+        )
+        if mismatch:
+            return CheckResult(
+                check=self.name,
+                status="warn",
+                severity="warn",
+                message="Declared bbox in metadata does not match the actual geometry bounds.",
+                expected=declared,
+                observed=actual,
+                suggestion=(
+                    "Re-export the file with accurate bbox metadata, "
+                    "or update the GeoParquet metadata to reflect the actual bounds."
+                ),
+            )
+        return CheckResult(
+            check=self.name,
+            status="pass",
+            severity="info",
+            message=f"Declared bbox {declared} matches actual geometry bounds.",
+        )
+
+
 def run_bounds_checks(
     info: DatasetInfo,
     contract: Contract | None = None,
 ) -> list[CheckResult]:
-    return [c.run(info, contract) for c in [BoundsAvailableCheck(), BoundsWithinCheck()]]
+    return [
+        c.run(info, contract)
+        for c in [BoundsAvailableCheck(), BoundsWithinCheck(), BboxConsistencyCheck()]
+    ]

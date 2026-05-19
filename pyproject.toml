@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "geoassert"
-version = "0.2.0"
+version = "0.3.0"
 description = "Data contracts for geospatial pipelines"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -55,6 +55,7 @@ dev = [
     "types-pyyaml",
     "shapely>=2.0",
     "geopandas>=0.14",
+    "duckdb>=0.10",
 ]
 
 [project.scripts]
@@ -86,7 +87,7 @@ select = ["E", "F", "I", "UP", "B", "SIM", "TCH"]
 ignore = ["B008"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["TC003"]
+"tests/**" = ["TC003", "E402"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["geoassert"]

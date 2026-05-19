@@ -11,6 +11,42 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ---
 
+## [0.3.0] — Unreleased
+
+### Added
+
+**DuckDB attribute backend**
+- `geoassert[duckdb]` extra now provides a real DuckDB engine for attribute checks
+- `--engine duckdb` flag on `geoassert validate` routes null/unique/range checks through DuckDB instead of loading columns into memory — much faster on large files
+- DuckDB reads cloud URIs (S3, GCS) natively without intermediate downloads
+- New helpers in `engines/duckdb.py`: `count_nulls()`, `count_distinct()`, `count_non_null()`, `count_total()`, `get_min_max()`
+
+**Directory & dataset validation**
+- `geoassert validate <directory> --contract <file>` now accepts a directory and validates every `*.parquet` file found under it
+- Python API: `geoassert.validate_directory(path, contract, pattern, sample, engine)` → `list[ValidationResult]`
+- First result in the list is a directory-level summary including partition checks
+
+**Partition validation** (`checks/partitions.py`)
+- `partitions.detected` — detects Hive `col=val` directory structure; warns when directory contains Parquet files but no Hive partitioning
+- `partitions.schema_consistency` — verifies all partition files share the same schema; fails on schema drift
+
+**Row group metadata checks**
+- `geoparquet.row_group_stats` — warns when row group column statistics are missing; missing stats prevent predicate pushdown and spatial filtering optimisations
+
+**Bbox consistency check**
+- `bounds.bbox_consistency` — compares the declared bbox in GeoParquet metadata to the actual bbox computed from geometries (requires `shapely` extra); warns on mismatch
+
+**Cloud path support**
+- `read_geoparquet_info()` and `read_table()` now detect `://` URIs and resolve them via `pyarrow.fs.FileSystem.from_uri()`, enabling transparent reads from S3, GCS, and Azure Blob Storage
+
+### Changed
+- `DatasetInfo` gains an `engine: str = "pyarrow"` field; set to `"duckdb"` to enable DuckDB dispatch in attribute checks
+- `DatasetInfo.path` type widened to `Path | str` to support cloud URI strings
+- `run_validation()` gains an `engine: str = "pyarrow"` parameter
+- `geoassert validate` gains `--engine` (`-e`) option
+
+---
+
 ## [0.2.0] — Unreleased
 
 ### Added

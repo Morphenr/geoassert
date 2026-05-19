@@ -1,4 +1,5 @@
 """DuckDB spatial engine (requires geoassert[duckdb])."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -8,6 +9,7 @@ if TYPE_CHECKING:
 
 try:
     import duckdb
+
     HAS_DUCKDB = True
 except ImportError:
     HAS_DUCKDB = False
@@ -16,8 +18,7 @@ except ImportError:
 def check_duckdb() -> None:
     if not HAS_DUCKDB:
         raise ImportError(
-            "duckdb is required for this engine. "
-            "Install it with: pip install 'geoassert[duckdb]'"
+            "duckdb is required for this engine. Install it with: pip install 'geoassert[duckdb]'"
         )
 
 

@@ -1,4 +1,5 @@
 """Validation orchestrator — runs all applicable checks for a dataset + contract."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -18,14 +19,17 @@ def run_validation(path: Path | str, contract: Contract) -> ValidationResult:
 
     # GeoParquet metadata — always run for Parquet inputs
     from geoassert.checks.geoparquet import run_metadata_checks
+
     all_checks.extend(run_metadata_checks(info, contract))
 
     # CRS checks (metadata only, no extras needed)
     from geoassert.checks.crs import run_crs_checks
+
     all_checks.extend(run_crs_checks(info, contract))
 
     # Bounds checks (metadata only)
     from geoassert.checks.bounds import run_bounds_checks
+
     all_checks.extend(run_bounds_checks(info, contract))
 
     # Geometry checks — require shapely
@@ -35,6 +39,7 @@ def run_validation(path: Path | str, contract: Contract) -> ValidationResult:
     # Attribute checks — pure PyArrow
     if contract.attributes:
         from geoassert.checks.attributes import run_attribute_checks
+
         all_checks.extend(run_attribute_checks(info, contract))
 
     failures = [c for c in all_checks if c.status == "fail"]
@@ -56,11 +61,14 @@ def run_validation(path: Path | str, contract: Contract) -> ValidationResult:
 def _run_geometry_checks(info: DatasetInfo, contract: Contract) -> list[CheckResult]:
     try:
         from geoassert.checks.geometry import run_geometry_checks
+
         return run_geometry_checks(info, contract)
     except ImportError:
-        return [CheckResult(
-            check="geometry",
-            status="skip",
-            severity="info",
-            message="Geometry checks skipped: install geoassert[shapely] to enable.",
-        )]
+        return [
+            CheckResult(
+                check="geometry",
+                status="skip",
+                severity="info",
+                message="Geometry checks skipped: install geoassert[shapely] to enable.",
+            )
+        ]

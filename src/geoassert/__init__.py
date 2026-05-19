@@ -1,4 +1,5 @@
 """geoassert — data contracts for geospatial pipelines."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING

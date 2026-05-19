@@ -1,4 +1,5 @@
 """CLI entry point."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -42,6 +43,7 @@ def profile(
 
     if format == "json":
         import json
+
         console.print_json(json.dumps(result, default=str))
     else:
         _print_profile(result, path)
@@ -100,6 +102,7 @@ def validate(
         console.print(result.to_markdown(), highlight=False)
     elif format == "github":
         from geoassert.reports.github import render_github_annotations
+
         render_github_annotations(result, console)
     else:
         _print_validation_result(result)
@@ -130,6 +133,7 @@ def geoparquet_check(
 
     if format == "json":
         import json
+
         console.print_json(json.dumps([c.to_dict() for c in checks], default=str))
     else:
         _print_check_list(checks, path)
@@ -175,6 +179,7 @@ def _print_check_list(checks: list, path: Path) -> None:
 
 def _print_validation_result(result: object) -> None:
     from geoassert.result import ValidationResult
+
     assert isinstance(result, ValidationResult)
 
     _print_check_list(result.checks, Path(str(result.stats.get("path", "dataset"))))

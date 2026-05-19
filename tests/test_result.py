@@ -1,4 +1,5 @@
 """Tests for result models."""
+
 from __future__ import annotations
 
 import json
@@ -24,12 +25,21 @@ def test_validation_result_to_json():
 
 
 def test_validation_result_to_markdown_contains_heading():
-    r = ValidationResult(passed=False, failures=[
-        CheckResult(check="a.b", status="fail", severity="error", message="bad thing",
-                    suggestion="fix it"),
-    ], checks=[
-        CheckResult(check="a.b", status="fail", severity="error", message="bad thing"),
-    ])
+    r = ValidationResult(
+        passed=False,
+        failures=[
+            CheckResult(
+                check="a.b",
+                status="fail",
+                severity="error",
+                message="bad thing",
+                suggestion="fix it",
+            ),
+        ],
+        checks=[
+            CheckResult(check="a.b", status="fail", severity="error", message="bad thing"),
+        ],
+    )
     md = r.to_markdown()
     assert "# geoassert" in md
     assert "FAILED" in md

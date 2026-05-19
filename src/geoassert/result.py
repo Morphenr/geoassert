@@ -1,4 +1,5 @@
 """Validation result models."""
+
 from __future__ import annotations
 
 import json
@@ -44,4 +45,5 @@ class ValidationResult:
 
     def to_markdown(self) -> str:
         from geoassert.reports.markdown import render_validation_result
+
         return render_validation_result(self)

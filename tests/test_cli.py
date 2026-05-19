@@ -1,4 +1,5 @@
 """CLI smoke tests."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -20,6 +21,7 @@ def test_profile_text(tmp_path: Path) -> None:
 
 def test_profile_json(tmp_path: Path) -> None:
     import json
+
     path = write_test_geoparquet(tmp_path / "data.parquet")
     result = runner.invoke(app, ["profile", str(path), "--format", "json"])
     assert result.exit_code == 0

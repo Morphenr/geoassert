@@ -1,4 +1,5 @@
 """Pydantic models for the geoassert contract schema."""
+
 from __future__ import annotations
 
 from typing import Any, Literal
@@ -27,7 +28,7 @@ class GeometryContract(BaseModel):
 
 
 class BoundsWithinConfig(BaseModel):
-    bbox: list[float] | None = None   # [minx, miny, maxx, maxy]
+    bbox: list[float] | None = None  # [minx, miny, maxx, maxy]
     country: str | None = None
 
 

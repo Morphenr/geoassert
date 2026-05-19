@@ -1,4 +1,5 @@
 """GitHub Actions annotation output."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING

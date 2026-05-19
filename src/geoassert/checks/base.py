@@ -1,4 +1,5 @@
 """Abstract base check."""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -14,5 +15,4 @@ class BaseCheck(ABC):
     name: str
 
     @abstractmethod
-    def run(self, info: DatasetInfo, contract: Contract | None = None) -> CheckResult:
-        ...
+    def run(self, info: DatasetInfo, contract: Contract | None = None) -> CheckResult: ...

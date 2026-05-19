@@ -1,4 +1,5 @@
 """CRS validation checks."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -36,12 +37,16 @@ class CRSExistsCheck(BaseCheck):
         crs = _observed_crs(info)
         if not crs:
             return CheckResult(
-                check=self.name, status="warn", severity="warn",
+                check=self.name,
+                status="warn",
+                severity="warn",
                 message="CRS could not be determined from dataset metadata.",
                 suggestion="Include CRS metadata when writing GeoParquet.",
             )
         return CheckResult(
-            check=self.name, status="pass", severity="info",
+            check=self.name,
+            status="pass",
+            severity="info",
             message=f"CRS detected: {crs}",
         )
 
@@ -51,21 +56,31 @@ class CRSMatchCheck(BaseCheck):
 
     def run(self, info: DatasetInfo, contract: Contract | None = None) -> CheckResult:
         if not (contract and contract.geometry and contract.geometry.crs):
-            return CheckResult(check=self.name, status="skip", severity="info",
-                               message="Skipped: no geometry.crs constraint in contract.")
+            return CheckResult(
+                check=self.name,
+                status="skip",
+                severity="info",
+                message="Skipped: no geometry.crs constraint in contract.",
+            )
         expected = contract.geometry.crs
         observed = _observed_crs(info)
         if not observed:
             return CheckResult(
-                check=self.name, status="fail", severity="error",
+                check=self.name,
+                status="fail",
+                severity="error",
                 message="Cannot verify CRS: no CRS detected in dataset.",
-                expected=expected, observed=None,
+                expected=expected,
+                observed=None,
             )
         if observed != expected:
             return CheckResult(
-                check=self.name, status="fail", severity="error",
+                check=self.name,
+                status="fail",
+                severity="error",
                 message="CRS metadata differs from contract.",
-                expected=expected, observed=observed,
+                expected=expected,
+                observed=observed,
                 why_it_matters=(
                     "Coordinate axis order and downstream spatial operations"
                     " may behave differently."
@@ -76,7 +91,9 @@ class CRSMatchCheck(BaseCheck):
                 ),
             )
         return CheckResult(
-            check=self.name, status="pass", severity="info",
+            check=self.name,
+            status="pass",
+            severity="info",
             message=f"CRS matches contract: {observed}",
         )
 

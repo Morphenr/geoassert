@@ -1,4 +1,5 @@
 """Shapely-based geometry operations (requires geoassert[shapely])."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -9,6 +10,7 @@ if TYPE_CHECKING:
 try:
     import shapely
     import shapely.wkb
+
     HAS_SHAPELY = True
 except ImportError:
     HAS_SHAPELY = False

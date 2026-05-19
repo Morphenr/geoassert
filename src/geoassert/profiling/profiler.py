@@ -1,4 +1,5 @@
 """Dataset profiling and starter-contract generation."""
+
 from __future__ import annotations
 
 from pathlib import Path

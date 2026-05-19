@@ -1,4 +1,5 @@
 """GeoPandas engine (requires geoassert[geopandas])."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -8,6 +9,7 @@ if TYPE_CHECKING:
 
 try:
     import geopandas as gpd
+
     HAS_GEOPANDAS = True
 except ImportError:
     HAS_GEOPANDAS = False

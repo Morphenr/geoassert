@@ -1,4 +1,5 @@
 """Attribute-level checks."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -24,13 +25,19 @@ class AttributeExistsCheck(BaseCheck):
         check_name = f"attributes.{self.column}.exists"
         if self.column not in info.schema.names:
             return CheckResult(
-                check=check_name, status="fail", severity="error",
+                check=check_name,
+                status="fail",
+                severity="error",
                 message=f"Required column {self.column!r} not found in dataset.",
                 expected=self.column,
                 observed=info.schema.names,
             )
-        return CheckResult(check=check_name, status="pass", severity="info",
-                           message=f"Column {self.column!r} present.")
+        return CheckResult(
+            check=check_name,
+            status="pass",
+            severity="info",
+            message=f"Column {self.column!r} present.",
+        )
 
 
 class AttributeNullCheck(BaseCheck):
@@ -43,26 +50,40 @@ class AttributeNullCheck(BaseCheck):
     def run(self, info: DatasetInfo, contract: Contract | None = None) -> CheckResult:
         check_name = f"attributes.{self.column}.nullable"
         if self.column not in info.schema.names:
-            return CheckResult(check=check_name, status="skip", severity="info",
-                               message=f"Skipped: column {self.column!r} not in schema.")
+            return CheckResult(
+                check=check_name,
+                status="skip",
+                severity="info",
+                message=f"Skipped: column {self.column!r} not in schema.",
+            )
         if self.nullable:
-            return CheckResult(check=check_name, status="pass", severity="info",
-                               message=f"Column {self.column!r} is allowed to be nullable.")
+            return CheckResult(
+                check=check_name,
+                status="pass",
+                severity="info",
+                message=f"Column {self.column!r} is allowed to be nullable.",
+            )
 
         table = read_table(info.path, columns=[self.column])
         arr = table.column(self.column)
         n_nulls = arr.null_count
         if n_nulls > 0:
             return CheckResult(
-                check=check_name, status="fail", severity="error",
+                check=check_name,
+                status="fail",
+                severity="error",
                 message=f"Column {self.column!r} has {n_nulls:,} null value(s) but nullable=false.",
                 expected="no nulls",
                 observed=f"{n_nulls:,} nulls",
                 affected_rows=n_nulls,
                 suggestion=f"Filter or fill null values in {self.column!r} before export.",
             )
-        return CheckResult(check=check_name, status="pass", severity="info",
-                           message=f"Column {self.column!r} has no null values.")
+        return CheckResult(
+            check=check_name,
+            status="pass",
+            severity="info",
+            message=f"Column {self.column!r} has no null values.",
+        )
 
 
 class AttributeUniqueCheck(BaseCheck):
@@ -74,8 +95,12 @@ class AttributeUniqueCheck(BaseCheck):
     def run(self, info: DatasetInfo, contract: Contract | None = None) -> CheckResult:
         check_name = f"attributes.{self.column}.unique"
         if self.column not in info.schema.names:
-            return CheckResult(check=check_name, status="skip", severity="info",
-                               message=f"Skipped: column {self.column!r} not in schema.")
+            return CheckResult(
+                check=check_name,
+                status="skip",
+                severity="info",
+                message=f"Skipped: column {self.column!r} not in schema.",
+            )
 
         table = read_table(info.path, columns=[self.column])
         arr = table.column(self.column)
@@ -84,15 +109,21 @@ class AttributeUniqueCheck(BaseCheck):
         n_dupes = n_total - n_distinct
         if n_dupes > 0:
             return CheckResult(
-                check=check_name, status="fail", severity="error",
+                check=check_name,
+                status="fail",
+                severity="error",
                 message=f"Column {self.column!r} has {n_dupes:,} duplicate value(s).",
                 expected="all values unique",
                 observed=f"{n_dupes:,} duplicates ({n_distinct:,} distinct / {n_total:,} total)",
                 affected_rows=n_dupes,
                 suggestion=f"Deduplicate {self.column!r} before export.",
             )
-        return CheckResult(check=check_name, status="pass", severity="info",
-                           message=f"Column {self.column!r} has all unique values.")
+        return CheckResult(
+            check=check_name,
+            status="pass",
+            severity="info",
+            message=f"Column {self.column!r} has all unique values.",
+        )
 
 
 class AttributeRangeCheck(BaseCheck):
@@ -106,14 +137,22 @@ class AttributeRangeCheck(BaseCheck):
     def run(self, info: DatasetInfo, contract: Contract | None = None) -> CheckResult:
         check_name = f"attributes.{self.column}.range"
         if self.column not in info.schema.names:
-            return CheckResult(check=check_name, status="skip", severity="info",
-                               message=f"Skipped: column {self.column!r} not in schema.")
+            return CheckResult(
+                check=check_name,
+                status="skip",
+                severity="info",
+                message=f"Skipped: column {self.column!r} not in schema.",
+            )
 
         table = read_table(info.path, columns=[self.column])
         arr = table.column(self.column).drop_null()
         if len(arr) == 0:
-            return CheckResult(check=check_name, status="skip", severity="info",
-                               message=f"Skipped: column {self.column!r} has no non-null values.")
+            return CheckResult(
+                check=check_name,
+                status="skip",
+                severity="info",
+                message=f"Skipped: column {self.column!r} has no non-null values.",
+            )
 
         observed_min = pc.min(arr).as_py()
         observed_max = pc.max(arr).as_py()
@@ -126,17 +165,20 @@ class AttributeRangeCheck(BaseCheck):
 
         if violations:
             return CheckResult(
-                check=check_name, status="fail", severity="error",
+                check=check_name,
+                status="fail",
+                severity="error",
                 message=f"Column {self.column!r} range violation: {'; '.join(violations)}",
                 expected={"min": self.min_val, "max": self.max_val},
                 observed={"min": observed_min, "max": observed_max},
                 suggestion=f"Filter or clamp {self.column!r} values before export.",
             )
         return CheckResult(
-            check=check_name, status="pass", severity="info",
+            check=check_name,
+            status="pass",
+            severity="info",
             message=(
-                f"Column {self.column!r} range"
-                f" [{observed_min}, {observed_max}] is within bounds."
+                f"Column {self.column!r} range [{observed_min}, {observed_max}] is within bounds."
             ),
         )
 

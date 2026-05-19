@@ -166,8 +166,11 @@ def test_all_fail_or_skip_for_plain_parquet(tmp_path: Path) -> None:
     statuses = {r.check: r.status for r in run_metadata_checks(info)}
     assert statuses["geoparquet.geo_metadata"] == "fail"
     # row_group_stats does not depend on geo metadata and may pass for well-written files
-    geo_dependent = {k: v for k, v in statuses.items()
-                     if k not in ("geoparquet.geo_metadata", "geoparquet.row_group_stats")}
+    geo_dependent = {
+        k: v
+        for k, v in statuses.items()
+        if k not in ("geoparquet.geo_metadata", "geoparquet.row_group_stats")
+    }
     assert all(s in ("skip", "fail") for s in geo_dependent.values())
 
 

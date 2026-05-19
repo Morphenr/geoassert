@@ -143,6 +143,5 @@ def run_partition_checks(
     contract: Contract | None = None,
 ) -> list[CheckResult]:
     return [
-        c.run(info, contract)
-        for c in [PartitionDetectedCheck(), PartitionSchemaConsistencyCheck()]
+        c.run(info, contract) for c in [PartitionDetectedCheck(), PartitionSchemaConsistencyCheck()]
     ]

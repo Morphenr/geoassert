@@ -22,6 +22,7 @@ def test_s3_uri_returns_filesystem():
         import pyarrow.fs  # noqa: F401
     except ImportError:
         import pytest
+
         pytest.skip("pyarrow.fs not available")
 
     path_on_fs, fs = _resolve_filesystem("s3://my-bucket/path/data.parquet")
@@ -35,6 +36,7 @@ def test_gcs_uri_returns_filesystem():
         import pyarrow.fs  # noqa: F401
     except ImportError:
         import pytest
+
         pytest.skip("pyarrow.fs not available")
 
     path_on_fs, fs = _resolve_filesystem("gs://my-bucket/path/data.parquet")

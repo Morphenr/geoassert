@@ -34,7 +34,7 @@ def count_nulls(path: Path | str, column: str) -> int:
     """Return number of NULL values in *column*."""
     conn, p = _conn(path)
     result = conn.execute(
-        f"SELECT COUNT(*) FROM read_parquet(?) WHERE \"{column}\" IS NULL", [p]
+        f'SELECT COUNT(*) FROM read_parquet(?) WHERE "{column}" IS NULL', [p]
     ).fetchone()
     return int(result[0]) if result else 0
 
@@ -42,18 +42,14 @@ def count_nulls(path: Path | str, column: str) -> int:
 def count_non_null(path: Path | str, column: str) -> int:
     """Return number of non-NULL values in *column*."""
     conn, p = _conn(path)
-    result = conn.execute(
-        f"SELECT COUNT(\"{column}\") FROM read_parquet(?)", [p]
-    ).fetchone()
+    result = conn.execute(f'SELECT COUNT("{column}") FROM read_parquet(?)', [p]).fetchone()
     return int(result[0]) if result else 0
 
 
 def count_distinct(path: Path | str, column: str) -> int:
     """Return number of distinct (non-NULL) values in *column*."""
     conn, p = _conn(path)
-    result = conn.execute(
-        f"SELECT COUNT(DISTINCT \"{column}\") FROM read_parquet(?)", [p]
-    ).fetchone()
+    result = conn.execute(f'SELECT COUNT(DISTINCT "{column}") FROM read_parquet(?)', [p]).fetchone()
     return int(result[0]) if result else 0
 
 
@@ -68,7 +64,7 @@ def get_min_max(path: Path | str, column: str) -> tuple[Any, Any]:
     """Return (min, max) for *column* ignoring NULLs."""
     conn, p = _conn(path)
     result = conn.execute(
-        f"SELECT MIN(\"{column}\"), MAX(\"{column}\") FROM read_parquet(?)", [p]
+        f'SELECT MIN("{column}"), MAX("{column}") FROM read_parquet(?)', [p]
     ).fetchone()
     if result is None:
         return (None, None)

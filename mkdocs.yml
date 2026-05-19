@@ -1,0 +1,68 @@
+site_name: geoassert
+site_description: Data contracts for geospatial pipelines.
+site_url: https://morphenr.github.io/geoassert
+repo_url: https://github.com/Morphenr/geoassert
+repo_name: Morphenr/geoassert
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.sections
+    - navigation.top
+    - search.highlight
+    - search.suggest
+    - content.code.copy
+    - content.code.annotate
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            docstring_style: google
+            show_source: false
+            show_root_heading: true
+            show_symbol_type_heading: true
+            merge_init_into_class: true
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Quickstart: quickstart.md
+  - Contracts: contracts.md
+  - Checks reference: checks.md
+  - CLI reference: cli.md
+  - Python API: python-api.md
+  - Engines: engines.md
+  - CI integration: ci.md
+  - Changelog: changelog.md

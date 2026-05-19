@@ -200,6 +200,51 @@ class GeometryTypeMetaCheck(BaseCheck):
         )
 
 
+class RowGroupStatsCheck(BaseCheck):
+    name = "geoparquet.row_group_stats"
+
+    def run(self, info: DatasetInfo, contract: Contract | None = None) -> CheckResult:
+        if info.parquet_metadata is None:
+            return CheckResult(
+                check=self.name,
+                status="skip",
+                severity="info",
+                message="Skipped: no Parquet metadata available.",
+            )
+        meta = info.parquet_metadata
+        n_rgs = meta.num_row_groups
+        cols_without_stats: list[str] = []
+        for i in range(n_rgs):
+            rg = meta.row_group(i)
+            for j in range(rg.num_columns):
+                col = rg.column(j)
+                if col.statistics is None:
+                    col_name = col.path_in_schema
+                    if col_name not in cols_without_stats:
+                        cols_without_stats.append(col_name)
+
+        if cols_without_stats:
+            return CheckResult(
+                check=self.name,
+                status="warn",
+                severity="warn",
+                message=(
+                    f"Row group statistics missing for column(s): {cols_without_stats}. "
+                    f"File has {n_rgs} row group(s)."
+                ),
+                suggestion=(
+                    "Write the file with statistics enabled to allow predicate pushdown "
+                    "and faster spatial filtering."
+                ),
+            )
+        return CheckResult(
+            check=self.name,
+            status="pass",
+            severity="info",
+            message=f"Row group statistics present for all columns across {n_rgs} row group(s).",
+        )
+
+
 def run_metadata_checks(
     info: DatasetInfo,
     contract: Contract | None = None,
@@ -212,5 +257,6 @@ def run_metadata_checks(
         EncodingCheck(),
         CRSParseableCheck(),
         GeometryTypeMetaCheck(),
+        RowGroupStatsCheck(),
     ]
     return [c.run(info, contract) for c in checks]

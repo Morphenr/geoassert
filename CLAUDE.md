@@ -68,6 +68,24 @@ uv sync --extra dev
 uv run pytest
 ```
 
+## Linting — MUST run before every commit
+
+CI enforces both lint and format checks (`ruff check` + `ruff format --check`) over all of `src/` and `tests/`. Always run the full suite before committing:
+
+```bash
+python3 -m ruff check src tests
+python3 -m ruff format --check src tests
+```
+
+To auto-fix and format in one step:
+
+```bash
+python3 -m ruff check src tests --fix
+python3 -m ruff format src tests
+```
+
+**Critical:** CI runs `uvx ruff check src tests` and `uvx ruff format --check src tests`. Running ruff only against new or changed files is not sufficient — always target the full `src` and `tests` directories.
+
 ## Adding a new check
 
 1. Add a class in the appropriate `checks/*.py` module inheriting `BaseCheck`.

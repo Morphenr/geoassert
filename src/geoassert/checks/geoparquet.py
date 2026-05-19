@@ -249,7 +249,20 @@ def run_metadata_checks(
     info: DatasetInfo,
     contract: Contract | None = None,
 ) -> list[CheckResult]:
-    """Run all GeoParquet metadata checks and return results."""
+    """Run all GeoParquet metadata checks and return results.
+
+    Skips all checks for non-file sources (PostGIS, BigQuery, Snowflake) since
+    GeoParquet metadata is a file-format concept.
+    """
+    if info.source_type != "file":
+        return [
+            CheckResult(
+                check="geoparquet",
+                status="skip",
+                severity="info",
+                message=f"GeoParquet metadata checks skipped: source is {info.source_type!r}.",
+            )
+        ]
     checks: list[BaseCheck] = [
         GeoMetadataCheck(),
         PrimaryColumnCheck(),

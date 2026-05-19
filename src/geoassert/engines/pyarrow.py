@@ -28,6 +28,8 @@ class DatasetInfo:
     parquet_metadata: Any | None = None  # pq.FileMetaData
     sample: int | None = None  # row limit for row-level checks
     engine: str = "pyarrow"  # "pyarrow" | "duckdb"
+    source_type: str = "file"  # "file" | "postgis" | "bigquery" | "snowflake"
+    table: pa.Table | None = None  # in-memory table for warehouse sources
 
 
 def _resolve_filesystem(
@@ -83,8 +85,15 @@ def read_table(path: Path | str, columns: list[str] | None = None) -> pa.Table:
 
 
 def read_table_for_check(info: DatasetInfo, columns: list[str] | None = None) -> pa.Table:
-    """Read a table for a check, honouring the sample size set on DatasetInfo."""
-    table = read_table(info.path, columns=columns)
+    """Read a table for a check, honouring the sample size set on DatasetInfo.
+
+    For warehouse sources (source_type != "file") uses the in-memory table
+    stored on info.table rather than reading from disk.
+    """
+    if info.table is not None:
+        table = info.table.select(columns) if columns else info.table
+    else:
+        table = read_table(info.path, columns=columns)
     if info.sample is not None and len(table) > info.sample:
         indices = sorted(random.sample(range(len(table)), info.sample))
         return table.take(indices)

@@ -18,23 +18,37 @@ def run_validation(
     sample: int | None = None,
     engine: str = "pyarrow",
 ) -> ValidationResult:
+    """Validate a GeoParquet file against a contract."""
     path = Path(path)
     info = read_geoparquet_info(path)
     info.sample = sample
     info.engine = engine
+    return run_validation_from_info(info, contract)
+
+
+def run_validation_from_info(
+    info: DatasetInfo,
+    contract: Contract,
+) -> ValidationResult:
+    """Run all checks for a pre-built DatasetInfo (file or warehouse source).
+
+    This is the core validation pipeline. `run_validation` calls this after
+    reading file metadata; warehouse engines call it directly after fetching
+    their data.
+    """
     all_checks: list[CheckResult] = []
 
-    # GeoParquet metadata — always run for Parquet inputs
+    # GeoParquet metadata — file sources only (skips for warehouses)
     from geoassert.checks.geoparquet import run_metadata_checks
 
     all_checks.extend(run_metadata_checks(info, contract))
 
-    # CRS checks (metadata only, no extras needed)
+    # CRS checks
     from geoassert.checks.crs import run_crs_checks
 
     all_checks.extend(run_crs_checks(info, contract))
 
-    # Bounds checks (metadata only + optional shapely consistency check)
+    # Bounds checks
     from geoassert.checks.bounds import run_bounds_checks
 
     all_checks.extend(run_bounds_checks(info, contract))
@@ -59,13 +73,14 @@ def run_validation(
     warnings = [c for c in all_checks if c.status == "warn"]
 
     stats: dict = {
-        "path": str(path),
+        "path": str(info.path),
+        "source_type": info.source_type,
         "rows": info.num_rows,
         "columns": len(info.schema.names),
-        "engine": engine,
+        "engine": info.engine,
     }
-    if sample is not None:
-        stats["sample"] = sample
+    if info.sample is not None:
+        stats["sample"] = info.sample
 
     return ValidationResult(
         passed=len(failures) == 0,
@@ -93,12 +108,9 @@ def validate_directory(
     if not files:
         return []
 
-    # Partition-level checks — use a synthetic DatasetInfo pointing at the directory
     results: list[ValidationResult] = []
-    _partition_result = _run_directory_checks(root, contract)
-    results.append(_partition_result)
+    results.append(_run_directory_checks(root, contract))
 
-    # Per-file validation
     for f in files:
         results.append(run_validation(f, contract, sample=sample, engine=engine))
 
@@ -111,7 +123,6 @@ def _run_directory_checks(root: Path, contract: Contract) -> ValidationResult:
 
     from geoassert.checks.partitions import run_partition_checks
 
-    # Minimal DatasetInfo pointing at the directory
     dir_info = DatasetInfo(
         path=root,
         schema=pa.schema([]),

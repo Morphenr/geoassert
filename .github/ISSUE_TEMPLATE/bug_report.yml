@@ -1,0 +1,45 @@
+name: Bug report
+description: Something is broken or producing unexpected output.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Thank you for taking the time to file a bug report.
+
+  - type: input
+    id: version
+    attributes:
+      label: geoassert version
+      placeholder: "0.1.0"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the bug
+      description: What did you expect, and what happened instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: |
+        Include the command or Python snippet you ran and the output you received.
+        Attach or paste a minimal GeoParquet/contract that triggers the issue if possible.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Python version, relevant installed packages.
+      placeholder: |
+        OS: macOS 14.x
+        Python: 3.12.x
+        pyarrow: 16.x
+        shapely: 2.x

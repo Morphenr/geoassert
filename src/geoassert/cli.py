@@ -1,0 +1,202 @@
+"""CLI entry point."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import typer
+from rich.console import Console
+
+from geoassert.exceptions import ContractError, DataReadError, GeoAssertError
+
+app = typer.Typer(
+    name="geoassert",
+    help="Data contracts for geospatial pipelines.",
+    add_completion=False,
+    no_args_is_help=True,
+)
+geoparquet_app = typer.Typer(help="GeoParquet-specific checks.", no_args_is_help=True)
+app.add_typer(geoparquet_app, name="geoparquet")
+
+console = Console()
+err = Console(stderr=True)
+
+_FORMAT_HELP = "Output format: text | json | markdown | github"
+
+
+@app.command()
+def profile(
+    path: Path = typer.Argument(..., help="Path to the dataset."),
+    format: str = typer.Option("text", "--format", "-f", help="Output format: text | json"),
+) -> None:
+    """Profile a geospatial dataset."""
+    from geoassert.profiling.profiler import profile_dataset
+
+    try:
+        result = profile_dataset(path)
+    except DataReadError as exc:
+        err.print(f"[red]Error:[/red] {exc}")
+        raise typer.Exit(3) from None
+    except GeoAssertError as exc:
+        err.print(f"[red]Error:[/red] {exc}")
+        raise typer.Exit(4) from None
+
+    if format == "json":
+        import json
+
+        console.print_json(json.dumps(result, default=str))
+    else:
+        _print_profile(result, path)
+
+
+@app.command("init-contract")
+def init_contract(
+    path: Path = typer.Argument(..., help="Path to the dataset."),
+    out: Path | None = typer.Option(None, "--out", "-o", help="Write to file (default: stdout)."),
+) -> None:
+    """Generate a starter contract YAML from an existing dataset."""
+    from geoassert.profiling.profiler import generate_contract_yaml
+
+    try:
+        yaml_str = generate_contract_yaml(path)
+    except DataReadError as exc:
+        err.print(f"[red]Error:[/red] {exc}")
+        raise typer.Exit(3) from None
+
+    if out:
+        out.write_text(yaml_str)
+        console.print(f"Contract written to [bold]{out}[/bold]")
+    else:
+        console.print(yaml_str, highlight=False)
+
+
+@app.command()
+def validate(
+    path: Path = typer.Argument(..., help="Path to the dataset."),
+    contract: Path = typer.Option(..., "--contract", "-c", help="Path to the contract YAML."),
+    format: str = typer.Option("text", "--format", "-f", help=_FORMAT_HELP),
+    fail_on_warn: bool = typer.Option(False, "--fail-on-warn", help="Exit 1 on warnings."),
+) -> None:
+    """Validate a dataset against a contract."""
+    from geoassert.contracts.loader import load_contract
+    from geoassert.runner import run_validation
+
+    try:
+        loaded = load_contract(contract)
+    except ContractError as exc:
+        err.print(f"[red]Contract error:[/red] {exc}")
+        raise typer.Exit(2) from None
+
+    try:
+        result = run_validation(path, loaded)
+    except DataReadError as exc:
+        err.print(f"[red]Data error:[/red] {exc}")
+        raise typer.Exit(3) from None
+    except GeoAssertError as exc:
+        err.print(f"[red]Error:[/red] {exc}")
+        raise typer.Exit(4) from None
+
+    if format == "json":
+        console.print_json(result.to_json())
+    elif format in ("markdown", "md"):
+        console.print(result.to_markdown(), highlight=False)
+    elif format == "github":
+        from geoassert.reports.github import render_github_annotations
+
+        render_github_annotations(result, console)
+    else:
+        _print_validation_result(result)
+
+    if not result.passed:
+        raise typer.Exit(1)
+    if fail_on_warn and result.warnings:
+        raise typer.Exit(1)
+
+
+@geoparquet_app.command("check")
+def geoparquet_check(
+    path: Path = typer.Argument(..., help="Path to the GeoParquet file."),
+    format: str = typer.Option("text", "--format", "-f", help="Output format: text | json"),
+) -> None:
+    """Check GeoParquet metadata validity."""
+    from geoassert.checks.geoparquet import run_metadata_checks
+    from geoassert.engines.pyarrow import read_geoparquet_info
+
+    try:
+        info = read_geoparquet_info(path)
+    except DataReadError as exc:
+        err.print(f"[red]Error:[/red] {exc}")
+        raise typer.Exit(3) from None
+
+    checks = run_metadata_checks(info)
+    failed = [c for c in checks if c.status == "fail"]
+
+    if format == "json":
+        import json
+
+        console.print_json(json.dumps([c.to_dict() for c in checks], default=str))
+    else:
+        _print_check_list(checks, path)
+
+    if failed:
+        raise typer.Exit(1)
+
+
+# ── rendering helpers ──────────────────────────────────────────────────────────
+
+_STATUS_STYLE = {
+    "pass": "[green]PASS[/green]",
+    "warn": "[yellow]WARN[/yellow]",
+    "fail": "[red]FAIL[/red]",
+    "skip": "[dim]SKIP[/dim]",
+}
+
+
+def _print_profile(prof: dict, path: Path) -> None:
+    console.rule(f"[bold]{path.name}")
+    console.print(f"  Rows:          {prof.get('rows', '?'):,}")
+    console.print(f"  Columns:       {prof.get('column_count', '?')}")
+    if "geometry_column" in prof:
+        console.print(f"  Geometry col:  {prof['geometry_column']}")
+    if "geometry_types" in prof:
+        console.print(f"  Geometry types: {prof['geometry_types']}")
+    if "crs" in prof:
+        console.print(f"  CRS:           {prof['crs']}")
+    if "bounds" in prof:
+        console.print(f"  Bounds:        {prof['bounds']}")
+
+
+def _print_check_list(checks: list, path: Path) -> None:
+    console.rule(f"[bold]{path.name}")
+    for c in checks:
+        label = _STATUS_STYLE.get(c.status, c.status)
+        console.print(f"  {label}  {c.check}")
+        if c.status in ("warn", "fail") and c.message:
+            console.print(f"       {c.message}", style="dim")
+        if c.suggestion:
+            console.print(f"       Suggestion: {c.suggestion}", style="dim italic")
+
+
+def _print_validation_result(result: object) -> None:
+    from geoassert.result import ValidationResult
+
+    assert isinstance(result, ValidationResult)
+
+    _print_check_list(result.checks, Path(str(result.stats.get("path", "dataset"))))
+
+    if result.failures:
+        console.print()
+        console.print("[bold red]Failures:[/bold red]")
+        for f in result.failures:
+            console.print(f"  [red]{f.check}[/red]")
+            if f.expected is not None:
+                console.print(f"    Expected:  {f.expected}")
+            if f.observed is not None:
+                console.print(f"    Observed:  {f.observed}")
+            if f.affected_rows is not None:
+                console.print(f"    Rows:      {f.affected_rows:,}")
+            if f.suggestion:
+                console.print(f"    Suggestion: {f.suggestion}", style="dim")
+    elif not result.warnings:
+        console.print()
+        console.print("[green]All checks passed.[/green]")

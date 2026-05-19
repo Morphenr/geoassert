@@ -1,0 +1,65 @@
+name: Check request
+description: Request a new validation check or improvement to an existing one.
+labels: [check-request]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template to request a new check or an improvement to an existing one.
+        Good check requests describe the failure mode, why it matters, and what good output should look like.
+
+  - type: input
+    id: check_name
+    attributes:
+      label: Proposed check name
+      description: "Dot-namespaced, e.g. geometry.duplicate_ratio or bounds.country"
+      placeholder: "geometry.duplicate_ratio"
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this catch?
+      description: Describe the data issue this check would detect and why it matters downstream.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_output
+    attributes:
+      label: Expected check output (failure case)
+      description: |
+        Sketch the failure output — what `expected`, `observed`, `suggestion`, and `why_it_matters` should say.
+      render: json
+      placeholder: |
+        {
+          "check": "geometry.duplicate_ratio",
+          "status": "warn",
+          "severity": "warn",
+          "expected": "< 1% duplicate geometries",
+          "observed": "3.2% duplicates (41,117 rows)",
+          "suggestion": "Deduplicate before export or set allowed_duplicate_ratio in the contract."
+        }
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Check category
+      options:
+        - geometry
+        - crs
+        - bounds
+        - attributes
+        - geoparquet
+        - profiling
+        - other
+    validations:
+      required: true
+
+  - type: textarea
+    id: extras
+    attributes:
+      label: Required extras / dependencies
+      description: Does this check require shapely, geopandas, duckdb, or can it run on core?
+      placeholder: "Requires shapely (geoassert[shapely])"
